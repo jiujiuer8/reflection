@@ -1,0 +1,930 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#1a1a2e">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>人生复盘系统</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            padding: 12px;
+            color: #fff;
+            font-size: 14px;
+        }
+        .container { max-width: 500px; margin: 0 auto; }
+        .header { text-align: center; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .header h1 { font-size: 20px; margin-bottom: 4px; }
+        .date { font-size: 12px; opacity: 0.7; }
+        
+        .nav-tabs {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+        }
+        .nav-tab {
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 12px;
+            cursor: pointer;
+            background: rgba(255,255,255,0.05);
+            transition: all 0.3s;
+            white-space: nowrap;
+        }
+        .nav-tab.active { background: rgba(78, 205, 196, 0.3); color: #4ecdc4; }
+        
+        .section {
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding: 14px;
+            margin-bottom: 12px;
+        }
+        .section-title {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .section-title .icon { font-size: 16px; }
+        
+        .input-field {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            border-radius: 8px;
+            padding: 10px 12px;
+            color: #fff;
+            font-size: 14px;
+            outline: none;
+            margin-bottom: 8px;
+        }
+        .input-field::placeholder { color: rgba(255, 255, 255, 0.4); }
+        
+        .textarea-field {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            border-radius: 8px;
+            padding: 10px 12px;
+            color: #fff;
+            font-size: 14px;
+            resize: none;
+            outline: none;
+            font-family: inherit;
+            min-height: 80px;
+        }
+        .textarea-field::placeholder { color: rgba(255, 255, 255, 0.4); }
+        
+        .feedback-box {
+            margin-top: 8px;
+            padding: 8px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            display: none;
+        }
+        .feedback-box.good { background: rgba(0, 184, 148, 0.2); display: block; }
+        .feedback-box.warning { background: rgba(255, 193, 7, 0.2); display: block; }
+        .feedback-box.error { background: rgba(255, 107, 107, 0.2); display: block; }
+        
+        .task-list { list-style: none; }
+        .task-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            margin-bottom: 6px;
+        }
+        .task-item.completed { opacity: 0.6; }
+        .task-item.completed .task-text { text-decoration: line-through; }
+        .task-checkbox {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .task-checkbox.checked { background: #4ecdc4; border-color: #4ecdc4; }
+        .task-checkbox.checked::after { content: '✓'; font-size: 10px; color: #fff; }
+        .task-text { flex: 1; font-size: 13px; }
+        
+        .add-task-row { display: flex; gap: 6px; margin-top: 8px; }
+        .add-task-input { flex: 1; padding: 8px 10px; font-size: 13px; }
+        .add-task-btn { padding: 0 14px; background: #4ecdc4; border: none; border-radius: 8px; color: #fff; cursor: pointer; }
+        
+        .progress-bar { height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; margin-top: 10px; }
+        .progress-fill { height: 100%; background: linear-gradient(90deg, #4ecdc4, #44a08d); border-radius: 2px; transition: width 0.5s; }
+        
+        .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+        .stat-card { text-align: center; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px; }
+        .stat-value { font-size: 20px; font-weight: bold; color: #4ecdc4; }
+        .stat-label { font-size: 11px; opacity: 0.7; margin-top: 2px; }
+        
+        .ikigai-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+        .ikigai-box { padding: 12px; background: rgba(255,255,255,0.05); border-radius: 8px; }
+        .ikigai-box h4 { font-size: 12px; margin-bottom: 6px; color: #4ecdc4; }
+        .ikigai-box textarea { width: 100%; background: transparent; border: none; color: #fff; font-size: 13px; resize: none; outline: none; min-height: 60px; }
+        
+        .swot-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+        .swot-box { padding: 12px; border-radius: 8px; }
+        .swot-box.s { background: rgba(0, 184, 148, 0.15); }
+        .swot-box.w { background: rgba(255, 107, 107, 0.15); }
+        .swot-box.o { background: rgba(78, 205, 196, 0.15); }
+        .swot-box.t { background: rgba(255, 193, 7, 0.15); }
+        .swot-box h4 { font-size: 12px; margin-bottom: 6px; }
+        .swot-box textarea { width: 100%; background: transparent; border: none; color: #fff; font-size: 13px; resize: none; outline: none; min-height: 50px; }
+        
+        .emotion-log { margin-top: 10px; }
+        .emotion-item { padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px; margin-bottom: 8px; }
+        .emotion-header { display: flex; justify-content: space-between; font-size: 11px; opacity: 0.7; margin-bottom: 6px; }
+        .emotion-content { font-size: 13px; }
+        .emotion-trigger { font-size: 12px; opacity: 0.8; margin-top: 4px; }
+        
+        .learning-progress { margin-top: 10px; }
+        .course-item { padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px; margin-bottom: 8px; }
+        .course-name { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+        .course-progress { display: flex; align-items: center; gap: 8px; }
+        .course-bar { flex: 1; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; }
+        .course-fill { height: 100%; background: #4ecdc4; border-radius: 3px; }
+        .course-percent { font-size: 12px; color: #4ecdc4; }
+        
+        .history-list { max-height: 300px; overflow-y: auto; }
+        .history-item { padding: 10px; background: rgba(255,255,255,0.05); border-radius: 8px; margin-bottom: 8px; }
+        .history-date { font-size: 11px; opacity: 0.7; margin-bottom: 4px; }
+        .history-summary { font-size: 13px; }
+        
+        .week-chart { display: flex; justify-content: space-between; align-items: flex-end; height: 100px; padding: 10px 0; }
+        .chart-bar { width: 12%; background: rgba(78, 205, 196, 0.3); border-radius: 3px 3px 0 0; position: relative; }
+        .chart-bar:hover { background: rgba(78, 205, 196, 0.5); }
+        .chart-label { text-align: center; margin-top: 4px; font-size: 10px; opacity: 0.7; }
+        
+        .btn-row { display: flex; gap: 8px; margin-top: 12px; }
+        .btn { flex: 1; padding: 12px; border-radius: 10px; border: none; font-size: 14px; font-weight: 600; cursor: pointer; }
+        .btn-primary { background: #4ecdc4; color: #1a1a2e; }
+        .btn-secondary { background: rgba(255,255,255,0.1); color: #fff; }
+        
+        .coach-tip { background: rgba(0, 184, 148, 0.1); border-left: 3px solid #00b894; padding: 10px; border-radius: 0 8px 8px 0; margin-top: 10px; font-size: 13px; }
+        
+        .insight-card { padding: 12px; background: rgba(255,255,255,0.05); border-radius: 8px; margin-top: 10px; }
+        .insight-title { font-size: 13px; font-weight: 600; margin-bottom: 8px; color: #4ecdc4; }
+        .insight-content { font-size: 13px; line-height: 1.5; }
+        
+        .hidden { display: none; }
+        
+        @media (max-width: 380px) {
+            body { padding: 8px; }
+            .section { padding: 10px; }
+            .nav-tab { padding: 6px 8px; font-size: 11px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🌟 人生复盘系统</h1>
+            <div class="date" id="currentDate"></div>
+        </div>
+
+        <div class="nav-tabs">
+            <div class="nav-tab active" onclick="showModule('daily')">📅 今日</div>
+            <div class="nav-tab" onclick="showModule('learning')">📚 学习</div>
+            <div class="nav-tab" onclick="showModule('career')">💼 职业</div>
+            <div class="nav-tab" onclick="showModule('life')">🎯 人生</div>
+            <div class="nav-tab" onclick="showModule('emotion')">💭 情绪</div>
+            <div class="nav-tab" onclick="showModule('love')">❤️ 情感</div>
+            <div class="nav-tab" onclick="showModule('history')">📊 历史</div>
+        </div>
+
+        <!-- 今日复盘 -->
+        <div id="dailyModule">
+            <div class="section">
+                <div class="section-title"><span class="icon">🎯</span> 今日目标</div>
+                <input type="text" class="input-field" id="goalInput" placeholder="今天最重要的一件事..." oninput="evaluateGoal()">
+                <div class="feedback-box" id="goalFeedback"></div>
+            </div>
+
+            <div class="section">
+                <div class="section-title"><span class="icon">📝</span> 任务清单 <span id="taskCount" style="font-size:12px;opacity:0.7">0/0</span></div>
+                <ul class="task-list" id="taskList"></ul>
+                <div class="add-task-row">
+                    <input type="text" class="input-field add-task-input" id="newTaskInput" placeholder="添加任务...">
+                    <button class="add-task-btn" onclick="addTask()">+</button>
+                </div>
+                <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+            </div>
+
+            <div class="section">
+                <div class="section-title"><span class="icon">💭</span> 今日复盘</div>
+                <textarea class="textarea-field" id="dailyNote" placeholder="今天学到了什么？有什么收获？"></textarea>
+            </div>
+
+            <div class="section">
+                <div class="section-title"><span class="icon">📊</span> 今日统计</div>
+                <div class="stats-grid">
+                    <div class="stat-card"><div class="stat-value" id="completedTasks">0</div><div class="stat-label">已完成</div></div>
+                    <div class="stat-card"><div class="stat-value" id="totalTasks">0</div><div class="stat-label">总任务</div></div>
+                    <div class="stat-card"><div class="stat-value" id="completionRate">0%</div><div class="stat-label">完成率</div></div>
+                </div>
+            </div>
+
+            <div class="btn-row">
+                <button class="btn btn-primary" onclick="saveDailyData()">保存</button>
+                <button class="btn btn-secondary" onclick="resetDaily()">重置</button>
+            </div>
+        </div>
+
+        <!-- 学习追踪 -->
+        <div id="learningModule" class="hidden">
+            <div class="section">
+                <div class="section-title"><span class="icon">🤖</span> AI课程学习</div>
+                <div class="learning-progress">
+                    <div class="course-item">
+                        <div class="course-name">当前学习内容</div>
+                        <input type="text" class="input-field" id="aiCourseContent" placeholder="正在学习什么？">
+                        <div class="course-progress">
+                            <div class="course-bar"><div class="course-fill" id="aiProgressFill" style="width:0%"></div></div>
+                            <input type="number" class="input-field" id="aiProgress" placeholder="%" style="width:60px;padding:6px;text-align:center" min="0" max="100">
+                        </div>
+                    </div>
+                </div>
+                <textarea class="textarea-field" id="aiNote" placeholder="学习笔记、心得体会..."></textarea>
+            </div>
+
+            <div class="section">
+                <div class="section-title"><span class="icon">🧠</span> 思维心力课程</div>
+                <div class="learning-progress">
+                    <div class="course-item">
+                        <div class="course-name">当前学习内容</div>
+                        <input type="text" class="input-field" id="mindCourseContent" placeholder="正在学习什么？">
+                        <div class="course-progress">
+                            <div class="course-bar"><div class="course-fill" id="mindProgressFill" style="width:0%"></div></div>
+                            <input type="number" class="input-field" id="mindProgress" placeholder="%" style="width:60px;padding:6px;text-align:center" min="0" max="100">
+                        </div>
+                    </div>
+                </div>
+                <textarea class="textarea-field" id="mindNote" placeholder="学习笔记、心得体会..."></textarea>
+            </div>
+
+            <div class="section">
+                <div class="section-title"><span class="icon">⏱️</span> 今日学习时长</div>
+                <input type="number" class="input-field" id="learningTime" placeholder="分钟" min="0">
+            </div>
+
+            <div class="coach-tip" id="learningCoach">
+                💡 建议：每天至少学习30分钟，保持持续进步！
+            </div>
+
+            <div class="btn-row">
+                <button class="btn btn-primary" onclick="saveLearningData()">保存学习记录</button>
+            </div>
+        </div>
+
+        <!-- 职业探索 -->
+        <div id="careerModule" class="hidden">
+            <div class="section">
+                <div class="section-title"><span class="icon">🔍</span> SWOT自我分析</div>
+                <div class="swot-grid">
+                    <div class="swot-box s">
+                        <h4>💪 优势 Strengths</h4>
+                        <textarea id="swotS" placeholder="我擅长什么？有什么核心竞争力？"></textarea>
+                    </div>
+                    <div class="swot-box w">
+                        <h4>🎯 劣势 Weaknesses</h4>
+                        <textarea id="swotW" placeholder="我需要改进什么？"></textarea>
+                    </div>
+                    <div class="swot-box o">
+                        <h4>🌟 机会 Opportunities</h4>
+                        <textarea id="swotO" placeholder="外部有什么机会？行业趋势？"></textarea>
+                    </div>
+                    <div class="swot-box t">
+                        <h4>⚠️ 威胁 Threats</h4>
+                        <textarea id="swotT" placeholder="有什么外部风险或挑战？"></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section">
+                <div class="section-title"><span class="icon">💭</span> 职业思考</div>
+                <textarea class="textarea-field" id="careerThought" placeholder="我想要什么样的工作？什么样的工作让我有成就感？"></textarea>
+                <textarea class="textarea-field" id="careerValue" placeholder="工作中我最看重什么？（薪资/成长/意义/自由...）" style="margin-top:8px"></textarea>
+            </div>
+
+            <div class="section">
+                <div class="section-title"><span class="icon">❓</span> 职业困惑</div>
+                <textarea class="textarea-field" id="careerConfusion" placeholder="我现在不确定什么？有什么困惑？"></textarea>
+            </div>
+
+            <div class="insight-card">
+                <div class="insight-title">💡 职业探索建议</div>
+                <div class="insight-content" id="careerInsight">
+                    定期回顾SWOT分析，关注优势+机会的组合策略。尝试小步快跑，用实践验证想法。
+                </div>
+            </div>
+
+            <div class="btn-row">
+                <button class="btn btn-primary" onclick="saveCareerData()">保存职业思考</button>
+            </div>
+        </div>
+
+        <!-- 人生愿景 -->
+        <div id="lifeModule" class="hidden">
+            <div class="section">
+                <div class="section-title"><span class="icon">🌟</span> Ikigai - 人生意义探索</div>
+                <p style="font-size:12px;opacity:0.7;margin-bottom:10px">找到热爱+擅长+社会需要+能获得报酬的交集</p>
+                <div class="ikigai-grid">
+                    <div class="ikigai-box">
+                        <h4>❤️ 我热爱什么</h4>
+                        <textarea id="ikigaiLove" placeholder="什么事情让我充满热情？"></textarea>
+                    </div>
+                    <div class="ikigai-box">
+                        <h4>💪 我擅长什么</h4>
+                        <textarea id="ikigaiSkill" placeholder="我有什么天赋和技能？"></textarea>
+                    </div>
+                    <div class="ikigai-box">
+                        <h4>🌍 社会需要什么</h4>
+                        <textarea id="ikigaiNeed" placeholder="世界/社会需要什么？"></textarea>
+                    </div>
+                    <div class="ikigai-box">
+                        <h4>💰 能获得报酬</h4>
+                        <textarea id="ikigaiPay" placeholder="什么能带来收入？"></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section">
+                <div class="section-title"><span class="icon">🎯</span> 我想成为什么样的人</div>
+                <textarea class="textarea-field" id="lifeGoal" placeholder="描述理想中的自己：性格、能力、生活方式..."></textarea>
+            </div>
+
+            <div class="section">
+                <div class="section-title"><span class="icon">💎</span> 我的价值观</div>
+                <textarea class="textarea-field" id="lifeValue" placeholder="我最看重什么？（诚实/自由/成长/家庭/贡献...）"></textarea>
+            </div>
+
+            <div class="section">
+                <div class="section-title"><span class="icon">📝</span> 人生思考记录</div>
+                <textarea class="textarea-field" id="lifeThought" placeholder="今天对人生有什么新的思考？"></textarea>
+            </div>
+
+            <div class="insight-card">
+                <div class="insight-title">💡 人生探索建议</div>
+                <div class="insight-content" id="lifeInsight">
+                    Ikigai的四个维度需要持续探索。定期回顾，观察变化趋势。迷茫时，先从"我擅长什么"开始，这是最确定的起点。
+                </div>
+            </div>
+
+            <div class="btn-row">
+                <button class="btn btn-primary" onclick="saveLifeData()">保存人生思考</button>
+            </div>
+        </div>
+
+        <!-- 情绪记录 -->
+        <div id="emotionModule" class="hidden">
+            <div class="section">
+                <div class="section-title"><span class="icon">📝</span> 情绪日记（CBT方法）</div>
+                <p style="font-size:12px;opacity:0.7;margin-bottom:10px">记录情绪→分析诱因→反思反应模式</p>
+                
+                <div style="margin-bottom:10px">
+                    <label style="font-size:12px;opacity:0.8">当前情绪状态</label>
+                    <select class="input-field" id="emotionType">
+                        <option value="">选择情绪</option>
+                        <option value="迷茫">迷茫</option>
+                        <option value="焦虑">焦虑</option>
+                        <option value="平静">平静</option>
+                        <option value="开心">开心</option>
+                        <option value="低落">低落</option>
+                        <option value="愤怒">愤怒</option>
+                        <option value="感恩">感恩</option>
+                        <option value="期待">期待</option>
+                    </select>
+                </div>
+                
+                <textarea class="textarea-field" id="emotionTrigger" placeholder="是什么触发了这个情绪？"></textarea>
+                <textarea class="textarea-field" id="emotionReaction" placeholder="我的反应是什么？想怎么做？" style="margin-top:8px"></textarea>
+                <textarea class="textarea-field" id="emotionReflection" placeholder="反思：这个情绪告诉我什么？我真正需要的是什么？" style="margin-top:8px"></textarea>
+            </div>
+
+            <div class="section">
+                <div class="section-title"><span class="icon">🌊</span> 迷茫时刻记录</div>
+                <textarea class="textarea-field" id="confusionLog" placeholder="今天有什么让我感到迷茫的事情？我在困惑什么？"></textarea>
+                <textarea class="textarea-field" id="confusionAction" placeholder="我打算怎么应对这个迷茫？" style="margin-top:8px"></textarea>
+            </div>
+
+            <div class="section">
+                <div class="section-title"><span class="icon">📊</span> 近期情绪趋势</div>
+                <div class="week-chart" id="emotionChart"></div>
+            </div>
+
+            <div class="coach-tip" id="emotionCoach">
+                💡 迷茫是成长的信号，说明你在思考更深层次的问题。记录下来，慢慢会找到答案。
+            </div>
+
+            <div class="btn-row">
+                <button class="btn btn-primary" onclick="saveEmotionData()">保存情绪记录</button>
+            </div>
+        </div>
+
+        <!-- 情感探索 -->
+        <div id="loveModule" class="hidden">
+            <div class="section">
+                <div class="section-title"><span class="icon">💭</span> 我喜欢什么样的人</div>
+                <textarea class="textarea-field" id="loveType" placeholder="描述你欣赏的人的特质：性格、价值观、行为方式..."></textarea>
+            </div>
+
+            <div class="section">
+                <div class="section-title"><span class="icon">💎</span> 关系中的价值观</div>
+                <textarea class="textarea-field" id="loveValue" placeholder="在关系中我最看重什么？（信任/陪伴/成长/理解...）"></textarea>
+            </div>
+
+            <div class="section">
+                <div class="section-title"><span class="icon">🔍</span> 自我认知</div>
+                <textarea class="textarea-field" id="loveSelf" placeholder="我在关系中是什么样的？我的优点和需要改进的地方？"></textarea>
+            </div>
+
+            <div class="section">
+                <div class="section-title"><span class="icon">📝</span> 情感思考记录</div>
+                <textarea class="textarea-field" id="loveThought" placeholder="今天对情感有什么新的思考或观察？"></textarea>
+            </div>
+
+            <div class="insight-card">
+                <div class="insight-title">💡 情感探索建议</div>
+                <div class="insight-content" id="loveInsight">
+                    了解自己想要什么样的人，首先要了解自己是什么样的人。记录你的观察和思考，慢慢会清晰起来。
+                </div>
+            </div>
+
+            <div class="btn-row">
+                <button class="btn btn-primary" onclick="saveLoveData()">保存情感思考</button>
+            </div>
+        </div>
+
+        <!-- 历史记录 -->
+        <div id="historyModule" class="hidden">
+            <div class="section">
+                <div class="section-title"><span class="icon">📊</span> 本周完成趋势</div>
+                <div class="week-chart" id="weekChart"></div>
+            </div>
+
+            <div class="section">
+                <div class="section-title"><span class="icon">📈</span> 数据洞察</div>
+                <div class="insight-card">
+                    <div class="insight-content" id="historyInsight">暂无数据，开始记录后会生成洞察</div>
+                </div>
+            </div>
+
+            <div class="section">
+                <div class="section-title"><span class="icon">📋</span> 历史记录</div>
+                <div class="history-list" id="historyList"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 存储键
+        const KEYS = {
+            daily: 'review-daily',
+            learning: 'review-learning',
+            career: 'review-career',
+            life: 'review-life',
+            emotion: 'review-emotion',
+            love: 'review-love',
+            history: 'review-history',
+            profile: 'review-profile'
+        };
+
+        // 格式化日期
+        function formatDate(date) {
+            return date.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
+        }
+
+        function formatShortDate(dateStr) {
+            return new Date(dateStr).toLocaleDateString('zh-CN', { month: 'short', day: 'numeric' });
+        }
+
+        // 显示模块
+        function showModule(name) {
+            document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('[id$="Module"]').forEach(m => m.classList.add('hidden'));
+            event.target.classList.add('active');
+            document.getElementById(name + 'Module').classList.remove('hidden');
+            
+            if (name === 'history') updateHistoryView();
+            if (name === 'emotion') updateEmotionChart();
+        }
+
+        // 目标评估
+        function evaluateGoal() {
+            const goal = document.getElementById('goalInput').value;
+            const feedback = document.getElementById('goalFeedback');
+            
+            if (!goal.trim()) { feedback.style.display = 'none'; return; }
+            
+            const verbs = ['完成', '学习', '写', '练习', '整理', '阅读', '复习', '计划', '准备', '思考', '探索'];
+            const hasVerb = verbs.some(v => goal.includes(v));
+            const isSpecific = goal.length >= 8 && goal.length <= 60;
+            
+            if (!hasVerb && goal.length < 8) {
+                feedback.className = 'feedback-box error';
+                feedback.innerHTML = '❌ 目标太笼统！建议包含动词和具体内容';
+            } else if (!hasVerb) {
+                feedback.className = 'feedback-box warning';
+                feedback.innerHTML = '⚠️ 建议添加行动动词';
+            } else if (!isSpecific) {
+                feedback.className = 'feedback-box warning';
+                feedback.innerHTML = goal.length < 8 ? '⚠️ 可以更具体' : '⚠️ 可以精简';
+            } else {
+                feedback.className = 'feedback-box good';
+                feedback.innerHTML = '✅ 目标设定很好！';
+            }
+        }
+
+        // 任务管理
+        function addTask() {
+            const input = document.getElementById('newTaskInput');
+            const text = input.value.trim();
+            if (text) {
+                const list = document.getElementById('taskList');
+                const li = document.createElement('li');
+                li.className = 'task-item';
+                li.innerHTML = `<span class="task-checkbox" onclick="toggleTask(this)"></span><span class="task-text">${text}</span><span style="font-size:12px;opacity:0.5;cursor:pointer" onclick="deleteTask(this)">✕</span>`;
+                list.appendChild(li);
+                input.value = '';
+                updateStats();
+            }
+        }
+
+        function toggleTask(el) {
+            el.classList.toggle('checked');
+            el.parentElement.classList.toggle('completed');
+            updateStats();
+        }
+
+        function deleteTask(el) {
+            el.parentElement.remove();
+            updateStats();
+        }
+
+        function updateStats() {
+            const total = document.querySelectorAll('.task-item').length;
+            const completed = document.querySelectorAll('.task-item.completed').length;
+            const rate = total > 0 ? Math.round((completed / total) * 100) : 0;
+            
+            document.getElementById('totalTasks').textContent = total;
+            document.getElementById('completedTasks').textContent = completed;
+            document.getElementById('completionRate').textContent = rate + '%';
+            document.getElementById('taskCount').textContent = `${completed}/${total}`;
+            document.getElementById('progressFill').style.width = rate + '%';
+        }
+
+        // 保存数据
+        function saveDailyData() {
+            const today = new Date().toDateString();
+            const tasks = Array.from(document.querySelectorAll('.task-item')).map(item => ({
+                text: item.querySelector('.task-text').textContent,
+                completed: item.classList.contains('completed')
+            }));
+            
+            const data = {
+                date: today,
+                goal: document.getElementById('goalInput').value,
+                tasks: tasks,
+                note: document.getElementById('dailyNote').value
+            };
+            
+            localStorage.setItem(KEYS.daily, JSON.stringify(data));
+            saveToHistory(data);
+            alert('✅ 已保存！');
+        }
+
+        function saveLearningData() {
+            const data = {
+                date: new Date().toDateString(),
+                ai: {
+                    content: document.getElementById('aiCourseContent').value,
+                    progress: document.getElementById('aiProgress').value || 0,
+                    note: document.getElementById('aiNote').value
+                },
+                mind: {
+                    content: document.getElementById('mindCourseContent').value,
+                    progress: document.getElementById('mindProgress').value || 0,
+                    note: document.getElementById('mindNote').value
+                },
+                time: document.getElementById('learningTime').value || 0
+            };
+            
+            localStorage.setItem(KEYS.learning, JSON.stringify(data));
+            updateLearningProgress();
+            alert('✅ 学习记录已保存！');
+        }
+
+        function updateLearningProgress() {
+            const aiProgress = document.getElementById('aiProgress').value || 0;
+            const mindProgress = document.getElementById('mindProgress').value || 0;
+            document.getElementById('aiProgressFill').style.width = aiProgress + '%';
+            document.getElementById('mindProgressFill').style.width = mindProgress + '%';
+        }
+
+        function saveCareerData() {
+            const data = {
+                date: new Date().toDateString(),
+                swot: {
+                    s: document.getElementById('swotS').value,
+                    w: document.getElementById('swotW').value,
+                    o: document.getElementById('swotO').value,
+                    t: document.getElementById('swotT').value
+                },
+                thought: document.getElementById('careerThought').value,
+                value: document.getElementById('careerValue').value,
+                confusion: document.getElementById('careerConfusion').value
+            };
+            
+            localStorage.setItem(KEYS.career, JSON.stringify(data));
+            alert('✅ 职业思考已保存！');
+        }
+
+        function saveLifeData() {
+            const data = {
+                date: new Date().toDateString(),
+                ikigai: {
+                    love: document.getElementById('ikigaiLove').value,
+                    skill: document.getElementById('ikigaiSkill').value,
+                    need: document.getElementById('ikigaiNeed').value,
+                    pay: document.getElementById('ikigaiPay').value
+                },
+                goal: document.getElementById('lifeGoal').value,
+                value: document.getElementById('lifeValue').value,
+                thought: document.getElementById('lifeThought').value
+            };
+            
+            localStorage.setItem(KEYS.life, JSON.stringify(data));
+            alert('✅ 人生思考已保存！');
+        }
+
+        function saveEmotionData() {
+            const data = {
+                date: new Date().toDateString(),
+                type: document.getElementById('emotionType').value,
+                trigger: document.getElementById('emotionTrigger').value,
+                reaction: document.getElementById('emotionReaction').value,
+                reflection: document.getElementById('emotionReflection').value,
+                confusion: document.getElementById('confusionLog').value,
+                confusionAction: document.getElementById('confusionAction').value
+            };
+            
+            localStorage.setItem(KEYS.emotion, JSON.stringify(data));
+            saveEmotionToHistory(data);
+            alert('✅ 情绪记录已保存！');
+        }
+
+        function saveLoveData() {
+            const data = {
+                date: new Date().toDateString(),
+                type: document.getElementById('loveType').value,
+                value: document.getElementById('loveValue').value,
+                self: document.getElementById('loveSelf').value,
+                thought: document.getElementById('loveThought').value
+            };
+            
+            localStorage.setItem(KEYS.love, JSON.stringify(data));
+            alert('✅ 情感思考已保存！');
+        }
+
+        function saveToHistory(data) {
+            const history = JSON.parse(localStorage.getItem(KEYS.history) || '[]');
+            const existing = history.findIndex(h => h.date === data.date);
+            
+            if (existing >= 0) {
+                history[existing] = { ...history[existing], ...data };
+            } else {
+                history.push(data);
+            }
+            
+            localStorage.setItem(KEYS.history, JSON.stringify(history));
+        }
+
+        function saveEmotionToHistory(data) {
+            const emotions = JSON.parse(localStorage.getItem('review-emotions-history') || '[]');
+            emotions.push(data);
+            localStorage.setItem('review-emotions-history', JSON.stringify(emotions));
+        }
+
+        function resetDaily() {
+            if (confirm('确定重置今日数据？')) {
+                document.getElementById('goalInput').value = '';
+                document.getElementById('dailyNote').value = '';
+                document.getElementById('taskList').innerHTML = '';
+                document.getElementById('goalFeedback').style.display = 'none';
+                localStorage.removeItem(KEYS.daily);
+                updateStats();
+            }
+        }
+
+        // 加载今日数据
+        function loadTodayData() {
+            const daily = JSON.parse(localStorage.getItem(KEYS.daily) || '{}');
+            const today = new Date().toDateString();
+            
+            if (daily.date === today) {
+                document.getElementById('goalInput').value = daily.goal || '';
+                document.getElementById('dailyNote').value = daily.note || '';
+                
+                const list = document.getElementById('taskList');
+                list.innerHTML = '';
+                (daily.tasks || []).forEach(task => {
+                    const li = document.createElement('li');
+                    li.className = `task-item ${task.completed ? 'completed' : ''}`;
+                    li.innerHTML = `<span class="task-checkbox ${task.completed ? 'checked' : ''}" onclick="toggleTask(this)"></span><span class="task-text">${task.text}</span><span style="font-size:12px;opacity:0.5;cursor:pointer" onclick="deleteTask(this)">✕</span>`;
+                    list.appendChild(li);
+                });
+                
+                if (daily.goal) evaluateGoal();
+            }
+            
+            // 加载其他模块数据
+            loadModuleData(KEYS.learning, ['aiCourseContent', 'aiProgress', 'aiNote', 'mindCourseContent', 'mindProgress', 'mindNote', 'learningTime']);
+            loadModuleData(KEYS.career, ['swotS', 'swotW', 'swotO', 'swotT', 'careerThought', 'careerValue', 'careerConfusion']);
+            loadModuleData(KEYS.life, ['ikigaiLove', 'ikigaiSkill', 'ikigaiNeed', 'ikigaiPay', 'lifeGoal', 'lifeValue', 'lifeThought']);
+            loadModuleData(KEYS.emotion, ['emotionType', 'emotionTrigger', 'emotionReaction', 'emotionReflection', 'confusionLog', 'confusionAction']);
+            loadModuleData(KEYS.love, ['loveType', 'loveValue', 'loveSelf', 'loveThought']);
+            
+            updateStats();
+            updateLearningProgress();
+        }
+
+        function loadModuleData(key, fields) {
+            const data = JSON.parse(localStorage.getItem(key) || '{}');
+            if (data.date === new Date().toDateString()) {
+                // 根据不同模块处理数据
+                if (key === KEYS.learning) {
+                    if (data.ai) {
+                        document.getElementById('aiCourseContent').value = data.ai.content || '';
+                        document.getElementById('aiProgress').value = data.ai.progress || '';
+                        document.getElementById('aiNote').value = data.ai.note || '';
+                    }
+                    if (data.mind) {
+                        document.getElementById('mindCourseContent').value = data.mind.content || '';
+                        document.getElementById('mindProgress').value = data.mind.progress || '';
+                        document.getElementById('mindNote').value = data.mind.note || '';
+                    }
+                    document.getElementById('learningTime').value = data.time || '';
+                } else if (key === KEYS.career && data.swot) {
+                    document.getElementById('swotS').value = data.swot.s || '';
+                    document.getElementById('swotW').value = data.swot.w || '';
+                    document.getElementById('swotO').value = data.swot.o || '';
+                    document.getElementById('swotT').value = data.swot.t || '';
+                    document.getElementById('careerThought').value = data.thought || '';
+                    document.getElementById('careerValue').value = data.value || '';
+                    document.getElementById('careerConfusion').value = data.confusion || '';
+                } else if (key === KEYS.life && data.ikigai) {
+                    document.getElementById('ikigaiLove').value = data.ikigai.love || '';
+                    document.getElementById('ikigaiSkill').value = data.ikigai.skill || '';
+                    document.getElementById('ikigaiNeed').value = data.ikigai.need || '';
+                    document.getElementById('ikigaiPay').value = data.ikigai.pay || '';
+                    document.getElementById('lifeGoal').value = data.goal || '';
+                    document.getElementById('lifeValue').value = data.value || '';
+                    document.getElementById('lifeThought').value = data.thought || '';
+                } else if (key === KEYS.emotion) {
+                    document.getElementById('emotionType').value = data.type || '';
+                    document.getElementById('emotionTrigger').value = data.trigger || '';
+                    document.getElementById('emotionReaction').value = data.reaction || '';
+                    document.getElementById('emotionReflection').value = data.reflection || '';
+                    document.getElementById('confusionLog').value = data.confusion || '';
+                    document.getElementById('confusionAction').value = data.confusionAction || '';
+                } else if (key === KEYS.love) {
+                    document.getElementById('loveType').value = data.type || '';
+                    document.getElementById('loveValue').value = data.value || '';
+                    document.getElementById('loveSelf').value = data.self || '';
+                    document.getElementById('loveThought').value = data.thought || '';
+                }
+            }
+        }
+
+        // 更新历史视图
+        function updateHistoryView() {
+            const history = JSON.parse(localStorage.getItem(KEYS.history) || '[]');
+            const list = document.getElementById('historyList');
+            list.innerHTML = '';
+            
+            history.sort((a, b) => new Date(b.date) - new Date(a.date));
+            
+            history.forEach(item => {
+                const completed = (item.tasks || []).filter(t => t.completed).length;
+                const total = (item.tasks || []).length;
+                
+                const div = document.createElement('div');
+                div.className = 'history-item';
+                div.innerHTML = `
+                    <div class="history-date">${formatDate(new Date(item.date))}</div>
+                    <div class="history-summary">🎯 ${item.goal || '未设定'} | 📝 ${completed}/${total} | ${item.note ? '💭 有复盘' : ''}</div>
+                `;
+                list.appendChild(div);
+            });
+            
+            updateWeekChart();
+            updateHistoryInsight();
+        }
+
+        function updateWeekChart() {
+            const history = JSON.parse(localStorage.getItem(KEYS.history) || '[]');
+            const chart = document.getElementById('weekChart');
+            chart.innerHTML = '';
+            
+            const days = ['日', '一', '二', '三', '四', '五', '六'];
+            const today = new Date();
+            
+            for (let i = 6; i >= 0; i--) {
+                const date = new Date(today);
+                date.setDate(date.getDate() - i);
+                const dateStr = date.toDateString();
+                
+                const dayData = history.find(h => h.date === dateStr);
+                const completed = dayData ? (dayData.tasks || []).filter(t => t.completed).length : 0;
+                const total = dayData ? (dayData.tasks || []).length : 0;
+                const rate = total > 0 ? (completed / total) * 100 : 0;
+                
+                const bar = document.createElement('div');
+                bar.className = 'chart-bar';
+                bar.style.height = Math.max(rate, 5) + '%';
+                chart.appendChild(bar);
+                
+                const label = document.createElement('div');
+                label.className = 'chart-label';
+                label.textContent = days[date.getDay()];
+                chart.appendChild(label);
+            }
+        }
+
+        function updateEmotionChart() {
+            const emotions = JSON.parse(localStorage.getItem('review-emotions-history') || '[]');
+            const chart = document.getElementById('emotionChart');
+            chart.innerHTML = '';
+            
+            const emotionMap = { '开心': 100, '感恩': 90, '期待': 80, '平静': 70, '迷茫': 40, '低落': 30, '焦虑': 20, '愤怒': 10 };
+            const days = ['日', '一', '二', '三', '四', '五', '六'];
+            const today = new Date();
+            
+            for (let i = 6; i >= 0; i--) {
+                const date = new Date(today);
+                date.setDate(date.getDate() - i);
+                const dateStr = date.toDateString();
+                
+                const dayEmotion = emotions.find(e => e.date === dateStr);
+                const value = dayEmotion ? (emotionMap[dayEmotion.type] || 50) : 50;
+                
+                const bar = document.createElement('div');
+                bar.className = 'chart-bar';
+                bar.style.height = value + '%';
+                chart.appendChild(bar);
+                
+                const label = document.createElement('div');
+                label.className = 'chart-label';
+                label.textContent = days[date.getDay()];
+                chart.appendChild(label);
+            }
+        }
+
+        function updateHistoryInsight() {
+            const history = JSON.parse(localStorage.getItem(KEYS.history) || '[]');
+            const insight = document.getElementById('historyInsight');
+            
+            if (history.length === 0) {
+                insight.textContent = '暂无数据，开始记录后会生成洞察';
+                return;
+            }
+            
+            const totalDays = history.length;
+            const totalTasks = history.reduce((sum, h) => sum + (h.tasks || []).length, 0);
+            const completedTasks = history.reduce((sum, h) => sum + (h.tasks || []).filter(t => t.completed).length, 0);
+            const avgRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+            
+            insight.innerHTML = `
+                📊 已记录 ${totalDays} 天<br>
+                📝 累计任务 ${totalTasks} 个，完成 ${completedTasks} 个<br>
+                📈 平均完成率 ${avgRate}%<br>
+                ${avgRate >= 70 ? '💪 执行力很强！' : avgRate >= 50 ? '👍 继续加油！' : '💡 可以尝试减少任务数量'}
+            `;
+        }
+
+        // 监听输入更新进度条
+        document.getElementById('aiProgress').addEventListener('input', updateLearningProgress);
+        document.getElementById('mindProgress').addEventListener('input', updateLearningProgress);
+        document.getElementById('newTaskInput').addEventListener('keyup', e => { if (e.key === 'Enter') addTask(); });
+
+        // 初始化
+        document.getElementById('currentDate').textContent = formatDate(new Date());
+        loadTodayData();
+    </script>
+</body>
+</html>
