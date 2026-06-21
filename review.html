@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#1a1a2e">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>每日复盘</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            padding: 15px;
+            color: #fff;
+        }
+        .container { max-width: 500px; margin: 0 auto; }
+        .header { text-align: center; margin-bottom: 15px; }
+        .header h1 { font-size: 22px; margin-bottom: 5px; }
+        .date { font-size: 14px; opacity: 0.7; }
+        
+        .tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 15px;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 4px;
+            border-radius: 12px;
+        }
+        .tab {
+            flex: 1;
+            padding: 10px 8px;
+            text-align: center;
+            border-radius: 8px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .tab.active { background: rgba(255, 255, 255, 0.15); }
+        
+        .section {
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
+            padding: 18px;
+            margin-bottom: 15px;
+            backdrop-filter: blur(10px);
+        }
+        .section-title {
+            font-size: 15px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .title-icon {
+            width: 20px;
+            height: 20px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+        }
+        .icon-target { background: #ff6b6b; }
+        .icon-task { background: #4ecdc4; }
+        .icon-note { background: #ffe66d; color: #333; }
+        .icon-stat { background: #a29bfe; }
+        .icon-history { background: #fd79a8; }
+        .icon-coach { background: #00b894; }
+        
+        .goal-input {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            border-radius: 10px;
+            padding: 14px;
+            color: #fff;
+            font-size: 15px;
+            outline: none;
+        }
+        .goal-input::placeholder { color: rgba(255, 255, 255, 0.4); }
+        
+        .goal-feedback {
+            margin-top: 10px;
+            padding: 10px 12px;
+            border-radius: 8px;
+            font-size: 13px;
+            display: none;
+        }
+        .goal-feedback.good {
+            background: rgba(0, 184, 148, 0.2);
+            border-left: 3px solid #00b894;
+            display: block;
+        }
+        .goal-feedback.warning {
+            background: rgba(255, 193, 7, 0.2);
+            border-left: 3px solid #ffc107;
+            display: block;
+        }
+        .goal-feedback.error {
+            background: rgba(255, 107, 107, 0.2);
+            border-left: 3px solid #ff6b6b;
+            display: block;
+        }
+        
+        .task-list { list-style: none; }
+        .task-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            margin-bottom: 8px;
+            transition: all 0.3s;
+        }
+        .task-item:hover { background: rgba(255, 255, 255, 0.1); }
+        .task-item.completed { opacity: 0.6; }
+        .task-item.completed .task-text { text-decoration: line-through; }
+        
+        .task-checkbox {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .task-checkbox.checked { background: #4ecdc4; border-color: #4ecdc4; }
+        .task-checkbox.checked::after { content: '✓'; font-size: 12px; color: #fff; }
+        
+        .task-text { flex: 1; font-size: 14px; }
+        
+        .add-task { display: flex; gap: 8px; margin-top: 10px; }
+        .add-task-input {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            border-radius: 10px;
+            padding: 12px;
+            color: #fff;
+            font-size: 14px;
+            outline: none;
+        }
+        .add-task-btn {
+            background: #4ecdc4;
+            border: none;
+            border-radius: 10px;
+            padding: 0 18px;
+            color: #fff;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        
+        .note-textarea {
+            width: 100%;
+            height: 100px;
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            border-radius: 10px;
+            padding: 14px;
+            color: #fff;
+            font-size: 14px;
+            resize: none;
+            outline: none;
+            font-family: inherit;
+        }
+        .note-textarea::placeholder { color: rgba(255, 255, 255, 0.4); }
+        
+        .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+        .stat-card {
+            text-align: center;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+        }
+        .stat-value { font-size: 24px; font-weight: bold; color: #4ecdc4; }
+        .stat-label { font-size: 11px; opacity: 0.7; margin-top: 4px; }
+        
+        .progress-bar {
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: 12px;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4ecdc4, #44a08d);
+            border-radius: 3px;
+            transition: width 0.5s;
+        }
+        
+        .action-bar { display: flex; gap: 10px; margin-top: 15px; }
+        .action-btn {
+            flex: 1;
+            padding: 14px;
+            border-radius: 12px;
+            border: none;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .btn-save { background: #4ecdc4; color: #1a1a2e; }
+        .btn-reset { background: rgba(255, 255, 255, 0.1); color: #fff; }
+        
+        .history-list { max-height: 400px; overflow-y: auto; }
+        .history-item {
+            padding: 14px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            margin-bottom: 10px;
+        }
+        .history-date { font-size: 13px; opacity: 0.7; margin-bottom: 8px; }
+        .history-goal { font-size: 15px; margin-bottom: 6px; font-weight: 600; }
+        .history-tasks { font-size: 13px; opacity: 0.8; margin-bottom: 6px; }
+        .history-note { font-size: 13px; opacity: 0.7; }
+        
+        .coach-container {
+            background: rgba(0, 184, 148, 0.1);
+            border-left: 4px solid #00b894;
+            padding: 15px;
+            border-radius: 0 10px 10px 0;
+        }
+        .coach-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #00b894;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            margin-bottom: 12px;
+        }
+        .coach-message { font-size: 14px; line-height: 1.6; }
+        .coach-suggestion {
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            font-size: 14px;
+        }
+        .coach-btn {
+            margin-top: 15px;
+            padding: 12px 24px;
+            background: #00b894;
+            border: none;
+            border-radius: 10px;
+            color: #fff;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+        }
+        
+        .week-chart {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            height: 120px;
+            padding: 15px 0;
+        }
+        .chart-bar {
+            width: 11%;
+            background: rgba(78, 205, 196, 0.3);
+            border-radius: 4px 4px 0 0;
+            position: relative;
+            transition: height 0.5s;
+        }
+        .chart-bar:hover { background: rgba(78, 205, 196, 0.5); }
+        .chart-bar .tooltip {
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.85);
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 11px;
+            white-space: nowrap;
+            opacity: 0;
+            transition: opacity 0.3s;
+            margin-bottom: 5px;
+            z-index: 10;
+        }
+        .chart-bar:hover .tooltip { opacity: 1; }
+        .chart-label {
+            text-align: center;
+            margin-top: 6px;
+            font-size: 11px;
+            opacity: 0.7;
+        }
+        
+        .welcome-tip {
+            background: rgba(78, 205, 196, 0.15);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        
+        .hidden { display: none; }
+        
+        @media (max-width: 400px) {
+            body { padding: 10px; }
+            .section { padding: 14px; }
+            .header h1 { font-size: 20px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📅 每日复盘</h1>
+            <div class="date" id="currentDate"></div>
+        </div>
+
+        <div class="tabs">
+            <div class="tab active" onclick="showTab('today')">今日</div>
+            <div class="tab" onclick="showTab('history')">历史</div>
+            <div class="tab" onclick="showTab('coach')">教练</div>
+        </div>
+
+        <!-- 今日页面 -->
+        <div id="todayTab">
+            <div class="section">
+                <div class="section-title">
+                    <span class="title-icon icon-target">🎯</span>
+                    今日目标
+                </div>
+                <input type="text" class="goal-input" id="goalInput" placeholder="今天最重要的一件事是..." oninput="evaluateGoal()">
+                <div class="goal-feedback" id="goalFeedback"></div>
+            </div>
+
+            <div class="section">
+                <div class="section-title">
+                    <span class="title-icon icon-task">📝</span>
+                    任务清单
+                    <span style="font-weight: normal; font-size: 12px; opacity: 0.7;" id="taskCount">0/0</span>
+                </div>
+                <ul class="task-list" id="taskList"></ul>
+                <div class="add-task">
+                    <input type="text" class="add-task-input" id="newTaskInput" placeholder="添加新任务...">
+                    <button class="add-task-btn" onclick="addTask()">+</button>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+            </div>
+
+            <div class="section">
+                <div class="section-title">
+                    <span class="title-icon icon-note">💭</span>
+                    今日复盘
+                </div>
+                <textarea class="note-textarea" id="noteTextarea" placeholder="今天学到了什么？有什么收获？遇到了什么挑战？"></textarea>
+            </div>
+
+            <div class="section">
+                <div class="section-title">
+                    <span class="title-icon icon-stat">📊</span>
+                    今日统计
+                </div>
+                <div class="stats">
+                    <div class="stat-card">
+                        <div class="stat-value" id="completedTasks">0</div>
+                        <div class="stat-label">已完成</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="totalTasks">0</div>
+                        <div class="stat-label">总任务</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="completionRate">0%</div>
+                        <div class="stat-label">完成率</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="action-bar">
+                <button class="action-btn btn-save" onclick="saveData()">保存</button>
+                <button class="action-btn btn-reset" onclick="resetData()">重置</button>
+            </div>
+        </div>
+
+        <!-- 历史页面 -->
+        <div id="historyTab" class="hidden">
+            <div class="section">
+                <div class="section-title">
+                    <span class="title-icon icon-history">📅</span>
+                    本周完成趋势
+                </div>
+                <div class="week-chart" id="weekChart"></div>
+            </div>
+
+            <div class="section">
+                <div class="section-title">
+                    <span class="title-icon icon-history">📋</span>
+                    历史记录
+                </div>
+                <div class="history-list" id="historyList"></div>
+            </div>
+        </div>
+
+        <!-- 教练页面 -->
+        <div id="coachTab" class="hidden">
+            <div class="welcome-tip" id="coachTip">
+                💡 我已经了解你的习惯和进度，会给你更贴心的建议！
+            </div>
+            <div class="section">
+                <div class="section-title">
+                    <span class="title-icon icon-coach">🤖</span>
+                    AI教练
+                </div>
+                <div class="coach-container">
+                    <div class="coach-avatar">🤝</div>
+                    <div class="coach-message">
+                        你好！我是你的专属复盘教练。我会持续观察你的习惯，给你最适合的建议。
+                    </div>
+                    <div class="coach-suggestion" id="coachSuggestion">
+                        <strong>📌 今日建议：</strong>
+                        <span id="suggestionText">点击下方按钮获取个性化建议</span>
+                    </div>
+                    <button class="coach-btn" onclick="getCoachAdvice()">获取建议</button>
+                </div>
+            </div>
+
+            <div class="section">
+                <div class="section-title">
+                    <span class="title-icon icon-coach">📊</span>
+                    你的习惯洞察
+                </div>
+                <div id="insightsContainer" style="font-size: 14px; line-height: 1.6;">
+                    <div id="insightsContent">点击获取建议后，我会分析你的历史数据并给出洞察</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const STORAGE_KEY = 'daily-review-data';
+        const HISTORY_KEY = 'daily-review-history';
+        const USER_PROFILE_KEY = 'daily-review-profile';
+        
+        function formatDate(date) {
+            const options = { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' };
+            return date.toLocaleDateString('zh-CN', options);
+        }
+        
+        function formatShortDate(dateStr) {
+            const date = new Date(dateStr);
+            const options = { month: 'short', day: 'numeric' };
+            return date.toLocaleDateString('zh-CN', options);
+        }
+        
+        function loadTodayData() {
+            const saved = localStorage.getItem(STORAGE_KEY);
+            if (saved) {
+                const data = JSON.parse(saved);
+                const today = new Date().toDateString();
+                
+                if (data.date === today) {
+                    document.getElementById('goalInput').value = data.goal || '';
+                    document.getElementById('noteTextarea').value = data.note || '';
+                    
+                    const taskList = document.getElementById('taskList');
+                    taskList.innerHTML = '';
+                    data.tasks.forEach((task, index) => {
+                        addTaskToDOM(task.text, task.completed, index);
+                    });
+                }
+            }
+            updateStats();
+            if (document.getElementById('goalInput').value) {
+                evaluateGoal();
+            }
+        }
+        
+        function saveData() {
+            const today = new Date().toDateString();
+            const tasks = [];
+            document.querySelectorAll('.task-item').forEach(item => {
+                tasks.push({
+                    text: item.querySelector('.task-text').textContent,
+                    completed: item.classList.contains('completed')
+                });
+            });
+            
+            const todayData = {
+                date: today,
+                goal: document.getElementById('goalInput').value,
+                tasks: tasks,
+                note: document.getElementById('noteTextarea').value
+            };
+            
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(todayData));
+            saveToHistory(todayData);
+            updateUserProfile(todayData);
+            alert('✅ 已保存！');
+        }
+        
+        function saveToHistory(todayData) {
+            const history = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+            const existingIndex = history.findIndex(h => h.date === todayData.date);
+            
+            if (existingIndex >= 0) {
+                history[existingIndex] = todayData;
+            } else {
+                history.push(todayData);
+            }
+            
+            localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+        }
+        
+        function updateUserProfile(todayData) {
+            const history = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+            const profile = JSON.parse(localStorage.getItem(USER_PROFILE_KEY) || '{}');
+            
+            const completedTasks = todayData.tasks.filter(t => t.completed).length;
+            const totalTasks = todayData.tasks.length;
+            
+            profile.totalDays = (profile.totalDays || 0) + 1;
+            profile.totalTasksCompleted = (profile.totalTasksCompleted || 0) + completedTasks;
+            profile.totalTasksCreated = (profile.totalTasksCreated || 0) + totalTasks;
+            profile.avgTasksPerDay = Math.round(profile.totalTasksCreated / profile.totalDays);
+            profile.avgCompletionRate = profile.totalTasksCreated > 0 
+                ? Math.round((profile.totalTasksCompleted / profile.totalTasksCreated) * 100) 
+                : 0;
+            
+            const recentHistory = history.slice(-7);
+            const activeDays = recentHistory.filter(h => h.tasks && h.tasks.length > 0).length;
+            profile.streak = activeDays;
+            
+            localStorage.setItem(USER_PROFILE_KEY, JSON.stringify(profile));
+        }
+        
+        function resetData() {
+            if (confirm('确定要重置今天的数据吗？')) {
+                document.getElementById('goalInput').value = '';
+                document.getElementById('noteTextarea').value = '';
+                document.getElementById('taskList').innerHTML = '';
+                document.getElementById('goalFeedback').style.display = 'none';
+                localStorage.removeItem(STORAGE_KEY);
+                updateStats();
+            }
+        }
+        
+        function addTask() {
+            const input = document.getElementById('newTaskInput');
+            const text = input.value.trim();
+            if (text) {
+                const taskList = document.getElementById('taskList');
+                addTaskToDOM(text, false, taskList.children.length);
+                input.value = '';
+                updateStats();
+            }
+        }
+        
+        function addTaskToDOM(text, completed, index) {
+            const taskList = document.getElementById('taskList');
+            const li = document.createElement('li');
+            li.className = `task-item ${completed ? 'completed' : ''}`;
+            li.innerHTML = `
+                <span class="task-checkbox ${completed ? 'checked' : ''}" onclick="toggleTask(this)"></span>
+                <span class="task-text">${text}</span>
+                <span style="font-size: 13px; opacity: 0.5; cursor: pointer;" onclick="deleteTask(this)">✕</span>
+            `;
+            taskList.appendChild(li);
+        }
+        
+        function toggleTask(el) {
+            el.classList.toggle('checked');
+            const li = el.parentElement;
+            li.classList.toggle('completed');
+            updateStats();
+        }
+        
+        function deleteTask(el) {
+            const li = el.parentElement;
+            li.remove();
+            updateStats();
+        }
+        
+        function updateStats() {
+            const total = document.querySelectorAll('.task-item').length;
+            const completed = document.querySelectorAll('.task-item.completed').length;
+            const rate = total > 0 ? Math.round((completed / total) * 100) : 0;
+            
+            document.getElementById('totalTasks').textContent = total;
+            document.getElementById('completedTasks').textContent = completed;
+            document.getElementById('completionRate').textContent = rate + '%';
+            document.getElementById('taskCount').textContent = `${completed}/${total}`;
+            document.getElementById('progressFill').style.width = rate + '%';
+        }
+        
+        function showTab(tabName) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('[id$="Tab"]').forEach(t => t.classList.add('hidden'));
+            
+            event.target.classList.add('active');
+            document.getElementById(tabName + 'Tab').classList.remove('hidden');
+            
+            if (tabName === 'history') {
+                updateHistoryView();
+            }
+        }
+        
+        function updateHistoryView() {
+            const history = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+            const historyList = document.getElementById('historyList');
+            const weekChart = document.getElementById('weekChart');
+            
+            historyList.innerHTML = '';
+            history.sort((a, b) => new Date(b.date) - new Date(a.date));
+            
+            history.forEach(item => {
+                const completed = item.tasks.filter(t => t.completed).length;
+                const total = item.tasks.length;
+                
+                const div = document.createElement('div');
+                div.className = 'history-item';
+                div.innerHTML = `
+                    <div class="history-date">${formatDate(new Date(item.date))}</div>
+                    <div class="history-goal">🎯 ${item.goal || '未设定目标'}</div>
+                    <div class="history-tasks">📝 任务完成: ${completed}/${total}</div>
+                    ${item.note ? `<div class="history-note">💭 ${item.note}</div>` : ''}
+                `;
+                historyList.appendChild(div);
+            });
+            
+            updateWeekChart();
+        }
+        
+        function updateWeekChart() {
+            const history = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+            const weekChart = document.getElementById('weekChart');
+            weekChart.innerHTML = '';
+            
+            const days = ['日', '一', '二', '三', '四', '五', '六'];
+            const today = new Date();
+            
+            for (let i = 6; i >= 0; i--) {
+                const date = new Date(today);
+                date.setDate(date.getDate() - i);
+                const dateStr = date.toDateString();
+                
+                const dayData = history.find(h => h.date === dateStr);
+                const completed = dayData ? dayData.tasks.filter(t => t.completed).length : 0;
+                const total = dayData ? dayData.tasks.length : 0;
+                const rate = total > 0 ? (completed / total) * 100 : 0;
+                const height = Math.max(rate, 5);
+                
+                const bar = document.createElement('div');
+                bar.className = 'chart-bar';
+                bar.style.height = height + '%';
+                bar.innerHTML = `
+                    <div class="tooltip">${formatShortDate(dateStr)}: ${completed}/${total}</div>
+                `;
+                weekChart.appendChild(bar);
+                
+                const label = document.createElement('div');
+                label.className = 'chart-label';
+                label.textContent = days[date.getDay()];
+                weekChart.appendChild(label);
+            }
+        }
+        
+        function evaluateGoal() {
+            const goal = document.getElementById('goalInput').value;
+            const feedback = document.getElementById('goalFeedback');
+            
+            if (!goal.trim()) {
+                feedback.style.display = 'none';
+                return;
+            }
+            
+            const verbs = ['完成', '学习', '写', '练习', '整理', '阅读', '复习', '计划', '准备', '提交'];
+            const hasVerb = verbs.some(v => goal.includes(v));
+            const isSpecific = goal.length >= 8 && goal.length <= 60;
+            
+            if (!hasVerb && goal.length < 8) {
+                feedback.className = 'goal-feedback error';
+                feedback.innerHTML = '❌ 目标太笼统了！建议包含动词和具体内容，比如"完成项目报告"';
+            } else if (!hasVerb) {
+                feedback.className = 'goal-feedback warning';
+                feedback.innerHTML = '⚠️ 建议添加行动动词，比如"完成"、"学习"、"练习"等，让目标更明确';
+            } else if (!isSpecific) {
+                feedback.className = 'goal-feedback warning';
+                feedback.innerHTML = goal.length < 8 ? '⚠️ 目标可以更具体一些' : '⚠️ 目标有点长，可以精简一下';
+            } else {
+                feedback.className = 'goal-feedback good';
+                feedback.innerHTML = '✅ 目标设定得很好！具体、可执行，祝你今天成功！';
+            }
+        }
+        
+        function getCoachAdvice() {
+            const goal = document.getElementById('goalInput').value;
+            const tasks = Array.from(document.querySelectorAll('.task-item')).map(item => ({
+                text: item.querySelector('.task-text').textContent,
+                completed: item.classList.contains('completed')
+            }));
+            const profile = JSON.parse(localStorage.getItem(USER_PROFILE_KEY) || '{}');
+            const history = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+            
+            const advice = generatePersonalizedAdvice(goal, tasks, profile, history);
+            document.getElementById('suggestionText').textContent = advice;
+            updateInsights(profile, history);
+        }
+        
+        function generatePersonalizedAdvice(goal, tasks, profile, history) {
+            const suggestions = [];
+            
+            if (!goal.trim()) {
+                suggestions.push('请先设定一个明确的今日目标。');
+            } else {
+                const verbs = ['完成', '学习', '写', '练习', '整理', '阅读', '复习'];
+                const hasVerb = verbs.some(v => goal.includes(v));
+                
+                if (!hasVerb) {
+                    suggestions.push('目标很棒，但如果加上行动动词会更明确，比如"完成"、"学习"等。');
+                }
+            }
+            
+            if (tasks.length === 0) {
+                suggestions.push('建议添加3-5个具体任务来支持你的目标。');
+            } else if (tasks.length > 8) {
+                suggestions.push('任务有点多，建议精简到3-5个最重要的，专注才能高效。');
+            } else if (tasks.length >= 3 && tasks.length <= 5) {
+                suggestions.push('任务数量很合理，不多不少正好！');
+            }
+            
+            const completedCount = tasks.filter(t => t.completed).length;
+            const progress = tasks.length > 0 ? (completedCount / tasks.length) * 100 : 0;
+            
+            if (progress === 0 && tasks.length > 0) {
+                suggestions.push('还没有完成任何任务，建议从最简单的开始，建立成就感！');
+            } else if (progress > 0 && progress < 50) {
+                suggestions.push('已经完成了一部分，继续加油！可以先完成小任务积累动力。');
+            } else if (progress >= 50 && progress < 100) {
+                suggestions.push('进度不错！坚持下去，马上就要完成所有任务了。');
+            } else if (progress === 100) {
+                suggestions.push('🎉 太棒了！所有任务都完成了，今天很充实！');
+            }
+            
+            if (profile.streak >= 3) {
+                suggestions.push(`🌟 你已经连续${profile.streak}天记录了，坚持就是胜利！`);
+            }
+            
+            if (profile.avgCompletionRate >= 70) {
+                suggestions.push('📈 你的平均完成率很高，执行力很强！');
+            } else if (profile.avgCompletionRate > 0 && profile.avgCompletionRate < 50) {
+                suggestions.push('💪 可以尝试减少任务数量，提高完成质量。');
+            }
+            
+            if (suggestions.length === 0) {
+                suggestions.push('你的目标和任务设定看起来很合理！继续保持，祝你今天一切顺利！');
+            }
+            
+            return suggestions.join(' ');
+        }
+        
+        function updateInsights(profile, history) {
+            const container = document.getElementById('insightsContainer');
+            const content = document.getElementById('insightsContent');
+            
+            if (profile.totalDays > 0) {
+                let insights = `<strong>📊 你的数据洞察：</strong><br><br>`;
+                insights += `- 你已经坚持记录 <strong>${profile.totalDays}</strong> 天了<br>`;
+                insights += `- 累计创建了 <strong>${profile.totalTasksCreated}</strong> 个任务<br>`;
+                insights += `- 累计完成了 <strong>${profile.totalTasksCompleted}</strong> 个任务<br>`;
+                insights += `- 平均每天设定 <strong>${profile.avgTasksPerDay}</strong> 个任务<br>`;
+                insights += `- 平均完成率 <strong>${profile.avgCompletionRate}%</strong><br>`;
+                insights += `- 当前连续记录 <strong>${profile.streak}</strong> 天`;
+                
+                if (profile.streak >= 7) {
+                    insights += `<br><br>🏆 太棒了！你已经坚持一周了！`;
+                }
+                
+                content.innerHTML = insights;
+            }
+        }
+        
+        document.getElementById('newTaskInput').addEventListener('keyup', function(e) {
+            if (e.key === 'Enter') addTask();
+        });
+        
+        document.getElementById('currentDate').textContent = formatDate(new Date());
+        loadTodayData();
+    </script>
+</body>
+</html>
