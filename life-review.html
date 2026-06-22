@@ -174,16 +174,21 @@
         <div id="todayTab">
             <!-- 学习追踪 -->
             <div class="section">
-                <div class="section-title">📚 今日学习</div>
-                <select class="input-field" id="learningCourse" style="padding:12px;">
-                    <option value="">选择课程</option>
-                    <option value="心思知">心思知</option>
-                    <option value="一堂">一堂</option>
-                    <option value="其他">其他</option>
-                </select>
-                <input type="text" class="input-field" id="learningContent" placeholder="今天学习了什麼？（如：AI提示词工程）">
-                <input type="number" class="input-field" id="learningTime" placeholder="学习时长（分钟）" min="0">
-                <textarea class="textarea-field" id="learningNote" placeholder="学习心得、收获..."></textarea>
+                <div class="section-title">📚 今日学习 <button class="add-task-btn" style="float:right;font-size:12px;padding:4px 12px" onclick="addLearning()">+ 添加课程</button></div>
+                <div id="learningList">
+                    <div class="learning-item">
+                        <select class="input-field course-select" style="padding:12px;">
+                            <option value="">选择课程</option>
+                            <option value="心思知">心思知</option>
+                            <option value="一堂">一堂</option>
+                            <option value="其他">其他</option>
+                        </select>
+                        <input type="text" class="input-field" placeholder="今天学习了什麼？（如：AI提示词工程）">
+                        <input type="number" class="input-field" placeholder="学习时长（分钟）" min="0">
+                        <textarea class="textarea-field" placeholder="学习心得、收获..."></textarea>
+                        <button class="delete-btn" onclick="deleteLearning(this)">删除</button>
+                    </div>
+                </div>
             </div>
 
             <!-- 目标 -->
@@ -367,6 +372,41 @@
                 input.placeholder = `目标${index + 1}...`;
             });
         }
+
+        // 添加学习记录
+        function addLearning() {
+            const learningList = document.getElementById('learningList');
+            const learningCount = learningList.querySelectorAll('.learning-item').length;
+            
+            if (learningCount >= 5) {
+                alert('最多记录5门课程，专注质量胜过数量！');
+                return;
+            }
+            
+            const newLearning = document.createElement('div');
+            newLearning.className = 'learning-item';
+            newLearning.innerHTML = `
+                <select class="input-field course-select" style="padding:12px;">
+                    <option value="">选择课程</option>
+                    <option value="心思知">心思知</option>
+                    <option value="一堂">一堂</option>
+                    <option value="其他">其他</option>
+                </select>
+                <input type="text" class="input-field" placeholder="今天学习了什麼？">
+                <input type="number" class="input-field" placeholder="学习时长（分钟）" min="0">
+                <textarea class="textarea-field" placeholder="学习心得、收获..."></textarea>
+                <button class="delete-btn" onclick="deleteLearning(this)">删除</button>
+            `;
+            learningList.appendChild(newLearning);
+        }
+
+        // 删除学习记录
+        function deleteLearning(el) {
+            const learningList = document.getElementById('learningList');
+            if (learningList.querySelectorAll('.learning-item').length > 1) {
+                el.closest('.learning-item').remove();
+            }
+        }
         
         // 目标评估
         function evaluateGoal(el) {
@@ -450,17 +490,20 @@
             
             const goals = Array.from(document.querySelectorAll('.goal-input')).map(input => input.value);
             
+            // 读取多条学习记录
+            const learnings = Array.from(document.querySelectorAll('.learning-item')).map(item => ({
+                course: item.querySelector('.course-select').value,
+                content: item.querySelectorAll('.input-field')[1].value,
+                time: item.querySelectorAll('.input-field')[2].value,
+                note: item.querySelector('.textarea-field').value
+            })).filter(item => item.course || item.content || item.time || item.note);
+            
             const data = {
                 date: today,
                 goals: goals,
                 tasks: tasks,
                 note: document.getElementById('dailyNote').value,
-                learning: {
-                    course: document.getElementById('learningCourse').value,
-                    content: document.getElementById('learningContent').value,
-                    time: document.getElementById('learningTime').value,
-                    note: document.getElementById('learningNote').value
-                }
+                learnings: learnings
             };
             
             // 保存今日数据
@@ -503,7 +546,11 @@
             history.forEach(h => {
                 totalTasks += (h.tasks || []).length;
                 completedTasks += (h.tasks || []).filter(t => t.completed).length;
-                totalLearningTime += parseInt(h.learning?.time) || 0;
+                // 处理多条学习记录
+                const learnings = h.learnings || (h.learning ? [h.learning] : []);
+                learnings.forEach(l => {
+                    totalLearningTime += parseInt(l.time) || 0;
+                });
             });
             
             profile.totalTasks = totalTasks;
@@ -556,10 +603,46 @@
                 // 只加载今天的数据
                 if (data.date === today) {
                     document.getElementById('dailyNote').value = data.note || '';
-                    document.getElementById('learningCourse').value = data.learning?.course || '';
-                    document.getElementById('learningContent').value = data.learning?.content || '';
-                    document.getElementById('learningTime').value = data.learning?.time || '';
-                    document.getElementById('learningNote').value = data.learning?.note || '';
+                    
+                    // 加载多条学习记录
+                    const learningList = document.getElementById('learningList');
+                    learningList.innerHTML = '';
+                    const learnings = data.learnings || (data.learning ? [data.learning] : []);
+                    
+                    if (learnings.length === 0) {
+                        learningList.innerHTML = `
+                            <div class="learning-item">
+                                <select class="input-field course-select" style="padding:12px;">
+                                    <option value="">选择课程</option>
+                                    <option value="心思知">心思知</option>
+                                    <option value="一堂">一堂</option>
+                                    <option value="其他">其他</option>
+                                </select>
+                                <input type="text" class="input-field" placeholder="今天学习了什麼？（如：AI提示词工程）">
+                                <input type="number" class="input-field" placeholder="学习时长（分钟）" min="0">
+                                <textarea class="textarea-field" placeholder="学习心得、收获..."></textarea>
+                                <button class="delete-btn" onclick="deleteLearning(this)">删除</button>
+                            </div>
+                        `;
+                    } else {
+                        learnings.forEach((learning, index) => {
+                            const div = document.createElement('div');
+                            div.className = 'learning-item';
+                            div.innerHTML = `
+                                <select class="input-field course-select" style="padding:12px;">
+                                    <option value="">选择课程</option>
+                                    <option value="心思知" ${learning.course === '心思知' ? 'selected' : ''}>心思知</option>
+                                    <option value="一堂" ${learning.course === '一堂' ? 'selected' : ''}>一堂</option>
+                                    <option value="其他" ${learning.course === '其他' ? 'selected' : ''}>其他</option>
+                                </select>
+                                <input type="text" class="input-field" placeholder="今天学习了什麼？" value="${learning.content || ''}">
+                                <input type="number" class="input-field" placeholder="学习时长（分钟）" min="0" value="${learning.time || ''}">
+                                <textarea class="textarea-field" placeholder="学习心得、收获...">${learning.note || ''}</textarea>
+                                <button class="delete-btn" onclick="deleteLearning(this)">删除</button>
+                            `;
+                            learningList.appendChild(div);
+                        });
+                    }
                     
                     // 加载目标
                     const goalList = document.getElementById('goalList');
@@ -635,13 +718,17 @@
                 const total = (item.tasks || []).length;
                 const goalsStr = (item.goals || []).filter(g => g).map((g, i) => `🎯${i+1} ${g}`).join('<br>');
                 
+                // 处理多条学习记录
+                const learnings = item.learnings || (item.learning ? [item.learning] : []);
+                const learningStr = learnings.map(l => `📚 ${l.course || '未分类'}: ${l.content || '无内容'} (${l.time || 0}分钟)`).join('<br>');
+                
                 const div = document.createElement('div');
                 div.className = 'history-item';
                 div.innerHTML = `
                     <div class="history-date">${formatDate(new Date(item.date))}</div>
                     <div class="history-content">
                         ${goalsStr || '无目标'}
-                        ${item.learning?.content ? `<br>📚 ${item.learning.content} (${item.learning.time || 0}分钟)` : ''}
+                        ${learningStr ? `<br>${learningStr}` : ''}
                         ${item.note ? `<br>💭 ${item.note.substring(0, 50)}${item.note.length > 50 ? '...' : ''}` : ''}
                     </div>
                     <div class="history-tasks">📝 ${completed}/${total} 任务</div>
