@@ -298,6 +298,16 @@
             </div>
 
             <div class="section">
+                <div class="section-title">🔗 分享数据链接</div>
+                <p style="font-size:13px;opacity:0.7;margin-bottom:15px">生成分享链接，在其他设备打开即可同步数据</p>
+                <button class="btn btn-primary" style="width:100%" onclick="generateShareLink()">🔗 生成分享链接</button>
+                <div id="shareLinkBox" style="margin-top:15px;display:none;">
+                    <input type="text" id="shareLink" class="input-field" readonly style="font-size:12px;">
+                    <button class="btn btn-secondary" style="width:100%;margin-top:8px" onclick="copyShareLink()">📋 复制链接</button>
+                </div>
+            </div>
+
+            <div class="section">
                 <div class="section-title">📤 导入数据</div>
                 <p style="font-size:13px;opacity:0.7;margin-bottom:15px">从JSON文件导入之前备份的记录</p>
                 <input type="file" id="importFile" accept=".json" style="display:none" onchange="handleFileImport()">
@@ -934,6 +944,67 @@
             alert('数据导出成功！文件已下载。');
         }
 
+        // 生成分享链接
+        function generateShareLink() {
+            const todayData = localStorage.getItem(STORAGE_KEY);
+            const historyData = localStorage.getItem(HISTORY_KEY);
+            const profileData = localStorage.getItem(PROFILE_KEY);
+            
+            const data = {
+                today: todayData ? JSON.parse(todayData) : null,
+                history: historyData ? JSON.parse(historyData) : [],
+                profile: profileData ? JSON.parse(profileData) : {}
+            };
+            
+            // 压缩数据为Base64
+            const encodedData = btoa(JSON.stringify(data));
+            const shareLink = `${window.location.origin}${window.location.pathname}?data=${encodeURIComponent(encodedData)}`;
+            
+            document.getElementById('shareLink').value = shareLink;
+            document.getElementById('shareLinkBox').style.display = 'block';
+            showFeedback('链接已生成，可以分享给其他设备！', 'success');
+        }
+
+        // 复制分享链接
+        function copyShareLink() {
+            const link = document.getElementById('shareLink');
+            link.select();
+            navigator.clipboard.writeText(link.value).then(() => {
+                showFeedback('链接已复制到剪贴板！', 'success');
+            }).catch(() => {
+                showFeedback('复制失败，请手动复制', 'warning');
+            });
+        }
+
+        // 检查URL参数并导入数据
+        function checkShareLink() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const encodedData = urlParams.get('data');
+            
+            if (encodedData) {
+                try {
+                    const data = JSON.parse(atob(decodeURIComponent(encodedData)));
+                    
+                    if (data.history) {
+                        localStorage.setItem(HISTORY_KEY, JSON.stringify(data.history));
+                    }
+                    if (data.today) {
+                        localStorage.setItem(STORAGE_KEY, JSON.stringify(data.today));
+                    }
+                    if (data.profile) {
+                        localStorage.setItem(PROFILE_KEY, JSON.stringify(data.profile));
+                    }
+                    
+                    showFeedback('数据已从链接导入！', 'success');
+                    
+                    // 移除URL中的data参数
+                    history.replaceState({}, document.title, window.location.pathname);
+                } catch (error) {
+                    console.error('Failed to parse shared data:', error);
+                }
+            }
+        }
+
         // 文件导入处理
         function handleFileImport() {
             const fileInput = document.getElementById('importFile');
@@ -1026,6 +1097,10 @@
         });
         
         document.getElementById('currentDate').textContent = formatDate(new Date());
+        
+        // 检查分享链接并导入数据
+        checkShareLink();
+        
         loadTodayData();
     </script>
 </body>
