@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>测试页面</title>
+    <style>
+        body { font-family: sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; }
+        .section { margin-bottom: 20px; padding: 15px; border: 1px solid #eee; border-radius: 10px; }
+        input, textarea, button { width: 100%; padding: 10px; margin: 5px 0; box-sizing: border-box; }
+        button { background: #4CAF50; color: white; border: none; cursor: pointer; }
+        .status { color: #666; font-size: 12px; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <h1>📝 每日复盘 - 测试版</h1>
+    
+    <div class="section">
+        <h3>今日学习</h3>
+        <select id="course">
+            <option value="心思知">心思知</option>
+            <option value="一堂">一堂</option>
+        </select>
+        <input type="text" id="content" placeholder="学习内容">
+        <input type="number" id="time" placeholder="时长(分钟)">
+    </div>
+    
+    <div class="section">
+        <h3>今日目标</h3>
+        <input type="text" id="goal1" placeholder="目标1">
+        <input type="text" id="goal2" placeholder="目标2">
+    </div>
+    
+    <div class="section">
+        <h3>今日复盘</h3>
+        <textarea id="note" placeholder="今天的收获..."></textarea>
+    </div>
+    
+    <button onclick="saveData()">保存记录</button>
+    <div class="status" id="status"></div>
+    
+    <div class="section">
+        <h3>历史记录</h3>
+        <div id="history"></div>
+    </div>
+
+    <script>
+        const STORAGE_KEY = 'daily_review';
+        const HISTORY_KEY = 'daily_review_history';
+        
+        function saveData() {
+            const data = {
+                date: new Date().toLocaleDateString(),
+                course: document.getElementById('course').value,
+                content: document.getElementById('content').value,
+                time: document.getElementById('time').value,
+                goals: [document.getElementById('goal1').value, document.getElementById('goal2').value],
+                note: document.getElementById('note').value
+            };
+            
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+            
+            const history = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+            history.unshift(data);
+            localStorage.setItem(HISTORY_KEY, JSON.stringify(history.slice(0, 10)));
+            
+            document.getElementById('status').textContent = '✅ 保存成功！';
+            loadHistory();
+        }
+        
+        function loadHistory() {
+            const history = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+            const html = history.map((item, i) => `
+                <div style="padding:10px;border-bottom:1px solid #eee;">
+                    <strong>${item.date}</strong><br>
+                    📚 ${item.course}: ${item.content} (${item.time}分钟)<br>
+                    🎯 ${item.goals.filter(g => g).join(', ')}
+                </div>
+            `).join('');
+            document.getElementById('history').innerHTML = html || '暂无记录';
+        }
+        
+        loadHistory();
+    </script>
+</body>
+</html>
