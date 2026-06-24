@@ -103,6 +103,49 @@
         .task-checkbox.checked::after { content: '✓'; font-size: 12px; color: #fff; }
         .task-text { flex: 1; font-size: 14px; }
         
+        .voice-btn {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            border: none;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-size: 18px;
+            cursor: pointer;
+            flex-shrink: 0;
+            transition: all 0.3s;
+        }
+        .voice-btn:hover { transform: scale(1.1); }
+        .voice-btn.recording {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a5a 100%);
+            animation: pulse 1s infinite;
+        }
+        
+        .voice-btn-large {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            border: none;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            flex-shrink: 0;
+            transition: all 0.3s;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+        .voice-btn-large:hover { transform: scale(1.05); }
+        .voice-btn-large.recording {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a5a 100%);
+            animation: pulse 1s infinite;
+            box-shadow: 0 4px 20px rgba(255, 107, 107, 0.5);
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+        
         .add-task-row { display: flex; gap: 8px; margin-top: 10px; }
         .add-task-input { flex: 1; padding: 12px; font-size: 14px; }
         .add-task-btn { padding: 0 20px; background: #4ecdc4; border: none; border-radius: 10px; color: #fff; font-weight: 600; cursor: pointer; }
@@ -187,6 +230,17 @@
 
         <!-- 今日页面 -->
         <div id="todayTab">
+            <!-- 快速语音记录 -->
+            <div class="section" style="background: linear-gradient(135deg, rgba(102, 126, 234, 0.3), rgba(118, 75, 162, 0.3));">
+                <div class="section-title">🎤 语音速记</div>
+                <p style="font-size:13px;opacity:0.7;margin-bottom:15px">点击麦克风，直接说出今天的记录，自动识别填充</p>
+                <div style="display:flex;gap:10px;">
+                    <textarea class="textarea-field" id="quickVoiceInput" placeholder="语音转文字会显示在这里..."></textarea>
+                    <button id="quickVoiceBtn" class="voice-btn-large" onclick="startQuickVoiceInput()">🎤</button>
+                </div>
+                <button class="btn btn-primary" style="width:100%;margin-top:10px" onclick="parseQuickVoice()">✨ 解析并填充记录</button>
+            </div>
+
             <!-- 学习追踪 -->
             <div class="section">
                 <div class="section-title">📚 今日学习 
@@ -305,6 +359,17 @@
                     <input type="text" id="shareLink" class="input-field" readonly style="font-size:12px;">
                     <button class="btn btn-secondary" style="width:100%;margin-top:8px" onclick="copyShareLink()">📋 复制链接</button>
                 </div>
+            </div>
+
+            <div class="section">
+                <div class="section-title">💬 自然语言记录</div>
+                <p style="font-size:13px;opacity:0.7;margin-bottom:15px">用自然语言描述今天的记录，系统自动解析填充</p>
+                <div style="display:flex;gap:5px;">
+                    <textarea class="textarea-field" id="naturalInput" placeholder="例如：今天学了心思知2小时，目标是完成课程笔记，任务完成了晨练和学习"></textarea>
+                    <button class="voice-btn" onclick="startVoiceInputForNatural()" title="语音输入">🎤</button>
+                </div>
+                <button class="btn btn-primary" style="width:100%;margin-top:10px" onclick="parseNaturalInput()">✨ 解析并填充</button>
+                <div id="parseResult" style="margin-top:10px;font-size:13px;text-align:center;display:none"></div>
             </div>
 
             <div class="section">
@@ -965,6 +1030,118 @@
             showFeedback('链接已生成，可以分享给其他设备！', 'success');
         }
 
+        // 快速语音输入
+        function startQuickVoiceInput() {
+            if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+                showFeedback('您的浏览器不支持语音输入', 'warning');
+                return;
+            }
+            
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            const recognition = new SpeechRecognition();
+            recognition.lang = 'zh-CN';
+            recognition.interimResults = true;
+            
+            const button = document.getElementById('quickVoiceBtn');
+            const textarea = document.getElementById('quickVoiceInput');
+            
+            button.classList.add('recording');
+            button.textContent = '⏹️';
+            
+            recognition.onresult = function(event) {
+                const transcript = Array.from(event.results).map(result => result[0].transcript).join('');
+                textarea.value = transcript;
+            };
+            
+            recognition.onend = function() {
+                button.classList.remove('recording');
+                button.textContent = '🎤';
+            };
+            
+            recognition.onerror = function() {
+                button.classList.remove('recording');
+                button.textContent = '🎤';
+                showFeedback('语音识别失败，请重试', 'warning');
+            };
+            
+            recognition.start();
+        }
+
+        // 解析快速语音输入
+        function parseQuickVoice() {
+            const input = document.getElementById('quickVoiceInput').value;
+            if (!input.trim()) {
+                showFeedback('请先说话或输入内容', 'warning');
+                return;
+            }
+            
+            const result = parseText(input);
+            
+            // 如果有学习记录，先清空现有内容
+            if (result.learnings && result.learnings.length > 0) {
+                const learningList = document.getElementById('learningList');
+                learningList.innerHTML = '';
+                result.learnings.forEach((learning, index) => {
+                    const div = document.createElement('div');
+                    div.className = 'learning-item';
+                    div.innerHTML = `
+                        <select class="input-field course-select" style="padding:12px;">
+                            <option value="">选择课程</option>
+                            <option value="心思知" ${learning.course === '心思知' ? 'selected' : ''}>心思知</option>
+                            <option value="一堂" ${learning.course === '一堂' ? 'selected' : ''}>一堂</option>
+                            <option value="其他" ${learning.course === '其他' ? 'selected' : ''}>其他</option>
+                        </select>
+                        <input type="text" class="input-field" placeholder="今天学习了什麼？" value="${learning.content || ''}">
+                        <input type="number" class="input-field" placeholder="学习时长（分钟）" min="0" value="${learning.time || ''}">
+                        <textarea class="textarea-field" placeholder="学习心得...">${learning.note || ''}</textarea>
+                        <button class="delete-btn" onclick="deleteLearning(this)">删除</button>
+                    `;
+                    learningList.appendChild(div);
+                });
+            }
+            
+            // 添加目标
+            if (result.goals && result.goals.length > 0) {
+                const goalList = document.getElementById('goalList');
+                result.goals.forEach((goal) => {
+                    const existingGoals = goalList.querySelectorAll('.goal-input');
+                    const exists = Array.from(existingGoals).some(g => g.value === goal);
+                    if (!exists) {
+                        const div = document.createElement('div');
+                        div.className = 'goal-item';
+                        div.style.marginBottom = '10px';
+                        div.innerHTML = `
+                            <input type="text" class="input-field goal-input" placeholder="目标..." value="${goal}" oninput="evaluateGoal(this)">
+                            <div class="feedback-box goal-feedback"></div>
+                        `;
+                        goalList.appendChild(div);
+                    }
+                });
+            }
+            
+            // 添加任务
+            if (result.tasks && result.tasks.length > 0) {
+                const taskList = document.getElementById('taskList');
+                result.tasks.forEach((task) => {
+                    const existingTasks = taskList.querySelectorAll('.task-text');
+                    const exists = Array.from(existingTasks).some(t => t.textContent === task.text);
+                    if (!exists) {
+                        addTask(task.text, task.completed);
+                    }
+                });
+            }
+            
+            // 添加备注
+            if (result.note) {
+                const existingNote = document.getElementById('dailyNote').value;
+                if (!existingNote) {
+                    document.getElementById('dailyNote').value = result.note;
+                }
+            }
+            
+            showFeedback(`语音解析成功！已识别 ${result.goals?.length || 0} 个目标、${result.learnings?.length || 0} 条学习记录、${result.tasks?.length || 0} 个任务`, 'success');
+        }
+
         // 复制分享链接
         function copyShareLink() {
             const link = document.getElementById('shareLink');
@@ -1003,6 +1180,166 @@
                     console.error('Failed to parse shared data:', error);
                 }
             }
+        }
+
+        // 自然语言输入的语音识别
+        function startVoiceInputForNatural() {
+            if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+                showFeedback('您的浏览器不支持语音输入', 'warning');
+                return;
+            }
+            
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            const recognition = new SpeechRecognition();
+            recognition.lang = 'zh-CN';
+            recognition.interimResults = true;
+            
+            const button = document.querySelector('.voice-btn');
+            const textarea = document.getElementById('naturalInput');
+            
+            button.classList.add('recording');
+            button.textContent = '⏹️';
+            
+            recognition.onresult = function(event) {
+                const transcript = Array.from(event.results).map(result => result[0].transcript).join('');
+                textarea.value = transcript;
+            };
+            
+            recognition.onend = function() {
+                button.classList.remove('recording');
+                button.textContent = '🎤';
+            };
+            
+            recognition.onerror = function() {
+                button.classList.remove('recording');
+                button.textContent = '🎤';
+                showFeedback('语音识别失败，请重试', 'warning');
+            };
+            
+            recognition.start();
+        }
+
+        // 解析自然语言输入
+        function parseNaturalInput() {
+            const input = document.getElementById('naturalInput').value;
+            if (!input.trim()) {
+                showFeedback('请输入内容或使用语音输入', 'warning');
+                return;
+            }
+            
+            const result = parseText(input);
+            
+            // 填充到今日记录
+            if (result.goals && result.goals.length > 0) {
+                const goalList = document.getElementById('goalList');
+                goalList.innerHTML = '';
+                result.goals.forEach((goal, index) => {
+                    const div = document.createElement('div');
+                    div.className = 'goal-item';
+                    div.style.marginBottom = '10px';
+                    div.innerHTML = `
+                        <input type="text" class="input-field goal-input" placeholder="目标${index + 1}..." value="${goal}" oninput="evaluateGoal(this)">
+                        <div class="feedback-box goal-feedback"></div>
+                    `;
+                    goalList.appendChild(div);
+                });
+            }
+            
+            if (result.learnings && result.learnings.length > 0) {
+                const learningList = document.getElementById('learningList');
+                learningList.innerHTML = '';
+                result.learnings.forEach((learning, index) => {
+                    const div = document.createElement('div');
+                    div.className = 'learning-item';
+                    div.innerHTML = `
+                        <select class="input-field course-select" style="padding:12px;">
+                            <option value="">选择课程</option>
+                            <option value="心思知" ${learning.course === '心思知' ? 'selected' : ''}>心思知</option>
+                            <option value="一堂" ${learning.course === '一堂' ? 'selected' : ''}>一堂</option>
+                            <option value="其他" ${learning.course === '其他' ? 'selected' : ''}>其他</option>
+                        </select>
+                        <input type="text" class="input-field" placeholder="今天学习了什麼？" value="${learning.content || ''}">
+                        <input type="number" class="input-field" placeholder="学习时长（分钟）" min="0" value="${learning.time || ''}">
+                        <textarea class="textarea-field" placeholder="学习心得...">${learning.note || ''}</textarea>
+                        <button class="delete-btn" onclick="deleteLearning(this)">删除</button>
+                    `;
+                    learningList.appendChild(div);
+                });
+            }
+            
+            if (result.tasks && result.tasks.length > 0) {
+                const taskList = document.getElementById('taskList');
+                taskList.innerHTML = '';
+                result.tasks.forEach((task) => {
+                    addTask(task.text, task.completed);
+                });
+            }
+            
+            if (result.note) {
+                document.getElementById('dailyNote').value = result.note;
+            }
+            
+            // 显示解析结果
+            const resultDiv = document.getElementById('parseResult');
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = `<span style="color:#00C851">解析成功！已填充 ${result.goals?.length || 0} 个目标、${result.learnings?.length || 0} 条学习记录、${result.tasks?.length || 0} 个任务</span>`;
+            
+            showFeedback('自然语言解析成功，已填充到今日记录！', 'success');
+        }
+
+        // 自然语言解析器
+        function parseText(text) {
+            const result = {
+                goals: [],
+                learnings: [],
+                tasks: [],
+                note: ''
+            };
+            
+            // 匹配学习记录：课程名 + 时长
+            const learningPattern = /(心思知|一堂|其他).*?(\d+)\s*(小时|分钟|h|min)?/g;
+            let match;
+            while ((match = learningPattern.exec(text)) !== null) {
+                const course = match[1];
+                const time = parseInt(match[2]);
+                const unit = match[3] || '小时';
+                const minutes = unit.includes('分钟') || unit === 'min' ? time : time * 60;
+                
+                result.learnings.push({
+                    course: course,
+                    content: '',
+                    time: minutes.toString(),
+                    note: ''
+                });
+            }
+            
+            // 匹配目标：目标是... / 目标：... / 要...
+            const goalPattern = /(目标(是|：)?|要|计划|打算)\s*([^，。！？；]+)/g;
+            while ((match = goalPattern.exec(text)) !== null) {
+                const goal = match[3].trim();
+                if (goal && goal.length > 1) {
+                    result.goals.push(goal);
+                }
+            }
+            
+            // 匹配任务：完成了... / 做完了... / 任务...
+            const taskPattern = /(完成了|做完了|任务|做了)\s*([^，。！？；]+)/g;
+            while ((match = taskPattern.exec(text)) !== null) {
+                const task = match[2].trim();
+                if (task && task.length > 1) {
+                    result.tasks.push({
+                        text: task,
+                        completed: true
+                    });
+                }
+            }
+            
+            // 如果没有解析到具体内容，作为备注
+            if (result.goals.length === 0 && result.learnings.length === 0 && result.tasks.length === 0) {
+                result.note = text;
+            }
+            
+            return result;
         }
 
         // 文件导入处理
