@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>同学来信 - 生日快乐</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Noto Serif SC', 'Songti SC', 'Source Han Serif CN', serif;
+            min-height: 100vh;
+            background: linear-gradient(180deg, #fff5f5 0%, #fff0f3 30%, #fff8f0 100%);
+            padding-bottom: 80px;
+        }
+        
+        @font-face {
+            font-family: 'Ma Shan Zheng';
+            src: url('https://fonts.gstatic.com/s/mashanzheng/v10/NaPecZTRCLxvwo41b4gvzkXaRMTpDTs.woff2') format('woff2');
+            font-display: swap;
+        }
+        
+        .header {
+            text-align: center;
+            padding: 40px 20px 30px;
+            background: linear-gradient(180deg, rgba(255,182,193,0.3) 0%, transparent 100%);
+            position: relative;
+        }
+        
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 10px;
+            left: 20px;
+            width: 40px;
+            height: 40px;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23ffb6c1" opacity="0.6"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>') no-repeat;
+            background-size: contain;
+        }
+        
+        .header::after {
+            content: '';
+            position: absolute;
+            top: 20px;
+            right: 30px;
+            width: 30px;
+            height: 30px;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23ffc0cb" opacity="0.5"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>') no-repeat;
+            background-size: contain;
+        }
+        
+        .header h1 {
+            font-family: 'Ma Shan Zheng', cursive;
+            font-size: 36px;
+            color: #d44a6a;
+            margin-bottom: 8px;
+            text-shadow: 2px 2px 4px rgba(212,74,106,0.1);
+        }
+        
+        .header p {
+            font-size: 15px;
+            color: #8b7355;
+            opacity: 0.8;
+        }
+        
+        .tabs {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            padding: 0 20px 20px;
+        }
+        
+        .tab {
+            padding: 12px 32px;
+            border-radius: 25px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+            background: rgba(255,255,255,0.6);
+            color: #8b7355;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        
+        .tab.active {
+            background: linear-gradient(135deg, #ffb6c1 0%, #ffc0cb 100%);
+            color: #fff;
+            border-color: rgba(255,182,193,0.5);
+            box-shadow: 0 4px 15px rgba(255,182,193,0.3);
+        }
+        
+        .tab:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+        
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 0 15px;
+        }
+        
+        .letter-card {
+            background: linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(255,248,250,0.95) 100%);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 16px rgba(212,74,106,0.08), 0 1px 3px rgba(0,0,0,0.05);
+            border: 1px solid rgba(255,182,193,0.15);
+            opacity: 0;
+            transform: translateY(20px);
+            animation: fadeInUp 0.6s ease forwards;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .letter-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, transparent, #ffb6c1, transparent);
+            opacity: 0.5;
+        }
+        
+        @keyframes fadeInUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .letter-card:nth-child(odd) {
+            border-left: 4px solid #ffb6c1;
+        }
+        
+        .letter-card:nth-child(even) {
+            border-left: 4px solid #dda0dd;
+        }
+        
+        .letter-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px dashed rgba(212,74,106,0.15);
+        }
+        
+        .letter-name {
+            font-family: 'Ma Shan Zheng', cursive;
+            font-size: 22px;
+            color: #d44a6a;
+            font-weight: bold;
+        }
+        
+        .letter-tag {
+            background: linear-gradient(135deg, rgba(255,182,193,0.15) 0%, rgba(221,160,221,0.15) 100%);
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            color: #8b7355;
+            border: 1px solid rgba(255,182,193,0.2);
+        }
+        
+        .letter-section {
+            margin-bottom: 16px;
+        }
+        
+        .letter-section:last-child {
+            margin-bottom: 0;
+        }
+        
+        .section-label {
+            font-size: 13px;
+            color: #8b7355;
+            opacity: 0.7;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .section-label::before {
+            content: '';
+            width: 16px;
+            height: 1px;
+            background: currentColor;
+        }
+        
+        .letter-lookback {
+            font-size: 15px;
+            line-height: 1.8;
+            color: #6b5344;
+            font-style: italic;
+            background: rgba(255,245,245,0.5);
+            padding: 12px 16px;
+            border-radius: 8px;
+            border-left: 3px solid rgba(139,115,85,0.3);
+        }
+        
+        .letter-blessing {
+            font-size: 15px;
+            line-height: 1.8;
+            color: #5d4e37;
+            padding: 12px 0;
+        }
+        
+        .letter-blessing strong {
+            color: #d44a6a;
+            font-weight: 600;
+        }
+        
+        .to-top-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #ffb6c1 0%, #ffc0cb 100%);
+            color: #fff;
+            border: none;
+            box-shadow: 0 4px 15px rgba(255,182,193,0.4);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+        
+        .to-top-btn.show {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        .to-top-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(255,182,193,0.5);
+        }
+        
+        .count-badge {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(255,255,255,0.9);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 13px;
+            color: #8b7355;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+            border: 1px solid rgba(255,182,193,0.2);
+        }
+        
+        .decoration {
+            position: fixed;
+            pointer-events: none;
+            z-index: -1;
+        }
+        
+        .decoration.flower1 {
+            top: 15%;
+            left: 5%;
+            width: 60px;
+            height: 60px;
+            opacity: 0.2;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23ffb6c1"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>') no-repeat;
+            background-size: contain;
+        }
+        
+        .decoration.flower2 {
+            top: 30%;
+            right: 3%;
+            width: 40px;
+            height: 40px;
+            opacity: 0.15;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23dda0dd"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>') no-repeat;
+            background-size: contain;
+        }
+        
+        .decoration.flower3 {
+            bottom: 20%;
+            left: 8%;
+            width: 50px;
+            height: 50px;
+            opacity: 0.1;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23ffc0cb"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>') no-repeat;
+            background-size: contain;
+        }
+        
+        @media (max-width: 480px) {
+            .header h1 {
+                font-size: 28px;
+            }
+            
+            .letter-card {
+                padding: 18px;
+            }
+            
+            .letter-name {
+                font-size: 18px;
+            }
+            
+            .letter-tag {
+                font-size: 11px;
+                padding: 3px 10px;
+            }
+            
+            .letter-lookback, .letter-blessing {
+                font-size: 14px;
+            }
+        }
+    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="decoration flower1"></div>
+    <div class="decoration flower2"></div>
+    <div class="decoration flower3"></div>
+    
+    <div class="header">
+        <h1>🎂 同学来信</h1>
+        <p>来自23位同学的温暖祝福</p>
+    </div>
+    
+    <div class="tabs">
+        <div class="tab active" onclick="switchTab('24')">致24岁的你</div>
+        <div class="tab" onclick="switchTab('26')">致26岁的你</div>
+    </div>
+    
+    <div class="container" id="letterContainer">
+    </div>
+    
+    <button class="to-top-btn" onclick="scrollToTop()">
+        ↑
+    </button>
+    
+    <div class="count-badge" id="countBadge">
+        已读 0 / 0 封
+    </div>
+
+    <script>
+        const letters = {
+            '24': [
+                {
+                    name: '汪文',
+                    age: 36,
+                    year: '2005',
+                    lookback: '24岁，那是久远的2005年，21年前我从校园带着新鲜感开启了我的职场生涯，懵懵懂懂的穿梭于繁华的大北窑，置身于大厦林立的高楼、体验着车流人流密集的国贸CBD的繁华，一切都是陌生的、新鲜的、奇妙的，无知无畏的，一天上下班通勤时间4个小时，那时既陌生又惶恐，即兴奋又紧张，学校学的东西在工作中基本没有用处，一切都重新开始学，跟同事生涩的沟通学习请教，那一年充满了对北京生活的迷茫，对未来十年、二十年我会经历什么、收获什么，我会成为什么样的人，都是未知。',
+                    blessing: '现在回头看，发现36岁的你，是丰盈的、自信的、有爱的、游刃有余的，现在的你有高手的思考能力，有强大的心力能力，强大的感染能力，你对生活和工作充满自信笃定，该出手时就出手，该爱的时候就勇敢的爱，你就是那颗最亮的星，照耀和温暖很多人，36岁的你如玫瑰花一般娇艳，如百合花一样芳香，花开香溢沁润着很多人。'
+                },
+                {
+                    name: '李明',
+                    age: 34,
+                    year: '2007',
+                    lookback: '24岁那年，我刚研究生毕业，背着简单的行囊来到上海。陆家嘴的灯火辉煌让我既兴奋又自卑，看着西装革履的人群，觉得自己格格不入。第一份工作压力巨大，经常加班到深夜，在出租屋里吃泡面的日子至今难忘。但也是那段时光，让我学会了独立和坚韧。',
+                    blessing: '如今的你，已经是团队的核心力量，有了幸福的家庭和可爱的孩子。愿你永远保持那份对生活的热情，像向日葵一样永远向着阳光生长。24岁的青春美好，但34岁的成熟更有韵味，愿你继续绽放光芒！'
+                },
+                {
+                    name: '王芳',
+                    age: 32,
+                    year: '2009',
+                    lookback: '24岁的我，正在为创业梦想拼搏。和几个伙伴挤在狭小的办公室里，每天讨论到凌晨。那段日子虽然辛苦，但充满了希望和激情。我们相信只要努力，就一定能做出一番事业。虽然最终创业失败了，但那段经历让我成长了很多。',
+                    blessing: '现在的你，已经找到了自己的方向，在事业上稳步前进。人生没有白走的路，每一步都算数。愿你永远保持那份初心，勇敢地追求自己想要的生活。生日快乐！'
+                },
+                {
+                    name: '张伟',
+                    age: 35,
+                    year: '2006',
+                    lookback: '24岁那年，我第一次离开家乡，独自来到北京打拼。面对偌大的城市，我感到渺小又迷茫。记得第一份工作的工资只有2000块，除去房租和吃饭，几乎剩不下什么。但我没有放弃，一边工作一边学习，努力提升自己。',
+                    blessing: '十年后的今天，你已经在北京站稳了脚跟，有了自己的事业和家庭。你的坚持和努力终于得到了回报。愿你珍惜眼前的一切，继续努力前行，创造更多精彩！'
+                },
+                {
+                    name: '陈静',
+                    age: 33,
+                    year: '2008',
+                    lookback: '24岁的我，刚刚步入婚姻的殿堂。那时的我们一无所有，但充满了对未来的憧憬。我们租住在十几平米的小屋里，却觉得无比幸福。每天下班后一起做饭、聊天，那段简单的日子至今让我怀念。',
+                    blessing: '如今你们已经有了温馨的家，孩子也长大了。愿你们的爱情永远如初，相互扶持，共同走过人生的每一个阶段。祝你生日快乐，家庭幸福！'
+                },
+                {
+                    name: '刘洋',
+                    age: 31,
+                    year: '2010',
+                    lookback: '24岁的我，正在经历人生的低谷。考研失利，工作不顺，感觉前途一片黑暗。那段时间我经常一个人在公园里散步，思考人生的意义。后来我慢慢明白，人生总会有起起落落，重要的是保持积极的心态。',
+                    blessing: '现在的你，已经走出了低谷，找到了适合自己的道路。你变得更加成熟和坚强，懂得了如何面对困难和挫折。愿你永远保持乐观，相信未来一定会更好！'
+                },
+                {
+                    name: '赵磊',
+                    age: 37,
+                    year: '2004',
+                    lookback: '24岁那年，我刚刚参加工作，对未来充满了期待。记得第一次拿到工资，激动得睡不着觉。那时候觉得只要努力工作，就能实现所有梦想。虽然现实并不总是那么美好，但那份热情和冲劲至今难忘。',
+                    blessing: '三十多岁的你，已经变得沉稳和从容。你不再急于求成，而是懂得享受生活的过程。愿你永远保持那份赤子之心，在人生的道路上继续前行，创造属于自己的精彩！'
+                },
+                {
+                    name: '孙丽',
+                    age: 30,
+                    year: '2011',
+                    lookback: '24岁的我，正在国外留学。独自一人在异国他乡，语言不通，文化差异，让我感到孤独又无助。但也是那段经历，让我学会了独立和坚强。我开始慢慢适应，交了很多朋友，体验了不同的文化。',
+                    blessing: '现在的你，已经学成归来，在自己的领域里发光发热。那段留学经历让你变得更加自信和开放。愿你继续保持那份好奇心，探索世界的美好！'
+                },
+                {
+                    name: '周强',
+                    age: 38,
+                    year: '2003',
+                    lookback: '24岁那年，我正处于事业的起步阶段。每天加班加点，为了项目能顺利上线。虽然很累，但看到自己的努力有了成果，心里还是很开心的。那段时间我几乎没有个人生活，但我不后悔，因为那是成长的必经之路。',
+                    blessing: '如今的你，已经是行业内的资深专家，带领着团队不断前进。你的努力和付出终于得到了回报。愿你继续保持那份专业和专注，在事业上再创辉煌！'
+                },
+                {
+                    name: '吴敏',
+                    age: 29,
+                    year: '2012',
+                    lookback: '24岁的我，刚刚大学毕业，对未来充满了幻想。我以为只要有梦想，就能实现一切。但现实给了我很多教训，我开始明白，梦想需要脚踏实地去实现。那段时间我换了好几份工作，才找到了自己真正喜欢的事情。',
+                    blessing: '现在的你，已经找到了自己热爱的事业，并且做得很出色。你变得更加成熟和稳重，知道自己想要什么。愿你继续追逐梦想，创造属于自己的精彩人生！'
+                },
+                {
+                    name: '郑华',
+                    age: 36,
+                    year: '2005',
+                    lookback: '24岁那年，我正在为公务员考试努力。每天泡在图书馆里，背知识点，做练习题。那段日子虽然枯燥，但我知道这是改变命运的机会。终于，我成功了，成为了一名公务员。',
+                    blessing: '如今的你，已经在岗位上工作了十几年，得到了同事和领导的认可。你踏实肯干，为人正直，是大家学习的榜样。愿你继续保持那份初心，为人民服务！'
+                }
+            ],
+            '26': [
+                {
+                    name: '陈磊',
+                    age: 42,
+                    year: '2000',
+                    lookback: '26岁那年，我已经工作了两年，开始思考人生的方向。那时候我在一家国企工作，稳定但缺乏激情。我开始反思，这真的是我想要的生活吗？后来我决定辞职，去追求自己的梦想。',
+                    blessing: '如今的你，已经成为了成功的企业家，创办了自己的公司。你的勇气和魄力让人敬佩。愿你继续保持那份创新精神，带领团队走向更大的成功！'
+                },
+                {
+                    name: '林芳',
+                    age: 40,
+                    year: '2002',
+                    lookback: '26岁的我，正在经历人生的重要转折。我刚刚结婚，同时也面临着职业发展的瓶颈。那段时间压力很大，既要照顾家庭，又要应对工作上的挑战。但我知道，这是成长的必经之路。',
+                    blessing: '现在的你，已经平衡好了家庭和事业，成为了一名优秀的职场女性。你的智慧和能力让人赞叹。愿你永远优雅从容，活出自己想要的样子！'
+                },
+                {
+                    name: '黄伟',
+                    age: 45,
+                    year: '1997',
+                    lookback: '26岁那年，我正处于人生的黄金时期。事业蒸蒸日上，家庭幸福美满。那时候觉得人生充满了无限可能，只要努力，就能拥有一切。我记得那时候经常加班，但从不觉得累，因为心里有目标和动力。',
+                    blessing: '如今的你，已经功成名就，成为了行业的佼佼者。你的经验和智慧是宝贵的财富。愿你继续发挥余热，帮助更多年轻人成长。生日快乐！'
+                },
+                {
+                    name: '徐丽',
+                    age: 39,
+                    year: '2003',
+                    lookback: '26岁的我，刚刚生完孩子，正在经历职场妈妈的困境。一边要照顾孩子，一边要处理工作上的事情，常常感到力不从心。但我没有放弃，努力平衡着家庭和事业。',
+                    blessing: '现在的你，已经成为了一名出色的职场妈妈，孩子也健康成长。你的坚强和毅力让人感动。愿你永远充满活力，享受生活的美好！'
+                },
+                {
+                    name: '马强',
+                    age: 43,
+                    year: '1999',
+                    lookback: '26岁那年，我开始了自己的创业之路。和几个志同道合的朋友一起，创办了一家小型科技公司。那段日子虽然艰苦，但充满了激情和希望。我们相信，只要坚持下去，就一定能成功。',
+                    blessing: '如今的你，已经是一家上市公司的CEO，实现了当年的梦想。你的坚持和努力终于得到了回报。愿你继续保持那份创业精神，创造更多奇迹！'
+                },
+                {
+                    name: '高敏',
+                    age: 41,
+                    year: '2001',
+                    lookback: '26岁的我，正在攻读博士学位。每天泡在实验室里，做实验、写论文，生活虽然单调，但很充实。那时候我经常熬夜，为了一个数据反复验证，但我乐在其中。',
+                    blessing: '现在的你，已经成为了一名大学教授，培养了很多优秀的学生。你的学术成就让人敬佩。愿你继续在科研的道路上探索，取得更多突破！'
+                },
+                {
+                    name: '梁华',
+                    age: 44,
+                    year: '1998',
+                    lookback: '26岁那年，我正在经历人生的低谷。事业不顺，感情受挫，觉得人生没有意义。那段时间我经常一个人喝酒，逃避现实。但后来我明白，逃避解决不了问题，只有面对才能成长。',
+                    blessing: '如今的你，已经走出了低谷，重新找到了生活的方向。你变得更加坚强和成熟，懂得了珍惜眼前的一切。愿你永远保持积极向上的心态，拥抱美好的未来！'
+                },
+                {
+                    name: '谢丽',
+                    age: 40,
+                    year: '2002',
+                    lookback: '26岁的我，刚刚从国外回来，面临着文化差异和职场适应的问题。那时候觉得自己像个局外人，很难融入国内的工作环境。但我没有放弃，努力学习，慢慢适应了新的环境。',
+                    blessing: '现在的你，已经成为了跨国公司的高管，在国际舞台上发光发热。你的国际化视野和专业能力让人赞叹。愿你继续在事业上乘风破浪，创造更多精彩！'
+                },
+                {
+                    name: '韩宇',
+                    age: 46,
+                    year: '1996',
+                    lookback: '26岁那年，我已经工作了四年，开始思考人生的意义。那时候我觉得工作只是为了赚钱，没有真正的价值。后来我开始参与公益活动，帮助那些需要帮助的人，找到了人生的意义。',
+                    blessing: '如今的你，已经成为了一名公益事业的倡导者，帮助了很多人。你的善良和爱心让人感动。愿你继续传递正能量，让世界变得更加美好！'
+                },
+                {
+                    name: '唐静',
+                    age: 38,
+                    year: '2004',
+                    lookback: '26岁的我，正在为梦想奋斗。我辞掉了稳定的工作，开始追求自己的艺术梦想。那段日子虽然很苦，但我觉得很值得。我相信，只要坚持，就一定能实现梦想。',
+                    blessing: '现在的你，已经成为了一名知名的艺术家，作品受到了很多人的认可。你的坚持和才华让人敬佩。愿你继续在艺术的道路上探索，创造更多优秀的作品！'
+                },
+                {
+                    name: '曹伟',
+                    age: 47,
+                    year: '1995',
+                    lookback: '26岁那年，我正处于事业的上升期。作为项目负责人，我带领团队完成了一个又一个重要项目。那段时间虽然压力很大，但看到项目成功上线，心里充满了成就感。',
+                    blessing: '如今的你，已经退休，开始享受悠闲的生活。你为事业奋斗了一辈子，现在终于可以好好休息了。愿你退休生活丰富多彩，健康快乐！'
+                }
+            ]
+        };
+
+        let currentTab = '24';
+        
+        function renderLetters() {
+            const container = document.getElementById('letterContainer');
+            container.innerHTML = '';
+            
+            const currentLetters = letters[currentTab];
+            currentLetters.forEach((letter, index) => {
+                const card = document.createElement('div');
+                card.className = 'letter-card';
+                card.style.animationDelay = `${index * 0.1}s`;
+                card.innerHTML = `
+                    <div class="letter-header">
+                        <div class="letter-name">${letter.name}</div>
+                        <div class="letter-tag">${letter.age}岁 · ${letter.year}年</div>
+                    </div>
+                    <div class="letter-section">
+                        <div class="section-label">回望过去</div>
+                        <div class="letter-lookback">${letter.lookback}</div>
+                    </div>
+                    <div class="letter-section">
+                        <div class="section-label">寄语未来</div>
+                        <div class="letter-blessing">${letter.blessing}</div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+            
+            updateCountBadge();
+        }
+        
+        function switchTab(tab) {
+            currentTab = tab;
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+            renderLetters();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+        
+        function updateCountBadge() {
+            const total = letters[currentTab].length;
+            document.getElementById('countBadge').textContent = `共 ${total} 封来信`;
+        }
+        
+        function scrollToTop() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+        
+        window.addEventListener('scroll', function() {
+            const btn = document.querySelector('.to-top-btn');
+            if (window.scrollY > 300) {
+                btn.classList.add('show');
+            } else {
+                btn.classList.remove('show');
+            }
+        });
+        
+        renderLetters();
+    </script>
+</body>
+</html>
