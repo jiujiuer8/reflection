@@ -478,22 +478,27 @@
         }
 
         function showTab(tabName) {
-            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('[id$="Tab"]').forEach(t => t.classList.add('hidden'));
-            
-            const tabs = document.querySelectorAll('.tab');
-            tabs.forEach(tab => {
-                if (tab.textContent.trim() === (tabName === 'today' ? '今日' : tabName === 'history' ? '历史' : '数据')) {
-                    tab.classList.add('active');
+            try {
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('[id$="Tab"]').forEach(t => t.classList.add('hidden'));
+                
+                if (tabName === 'today') {
+                    document.querySelectorAll('.tab')[0].classList.add('active');
+                } else if (tabName === 'history') {
+                    document.querySelectorAll('.tab')[1].classList.add('active');
+                } else if (tabName === 'data') {
+                    document.querySelectorAll('.tab')[2].classList.add('active');
                 }
-            });
-            
-            document.getElementById(tabName + 'Tab').classList.remove('hidden');
-            
-            if (tabName === 'history') {
-                updateHistoryView();
-            } else if (tabName === 'data') {
-                updateDataStats();
+                
+                document.getElementById(tabName + 'Tab').classList.remove('hidden');
+                
+                if (tabName === 'history') {
+                    updateHistoryView();
+                } else if (tabName === 'data') {
+                    updateDataStats();
+                }
+            } catch (e) {
+                console.error('showTab error:', e);
             }
         }
 
