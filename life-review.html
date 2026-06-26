@@ -451,6 +451,7 @@
             <div style="margin-bottom:15px">
                 <label style="font-size:14px;display:block;margin-bottom:8px">DeepSeek API Key</label>
                 <input type="text" class="input-field" id="apiKeyInput" placeholder="输入你的 API Key">
+                <div id="apiKeyStatus" style="font-size:12px;margin-top:8px"></div>
                 <p style="font-size:12px;opacity:0.6;margin-top:8px">配置后可开启 AI 智能解析和 AI 复盘功能</p>
             </div>
             <button class="btn btn-primary" style="width:100%" onclick="saveApiKey()">保存设置</button>
@@ -489,6 +490,7 @@
         function openSettings() {
             const apiKey = localStorage.getItem(API_KEY_KEY);
             document.getElementById('apiKeyInput').value = apiKey || '';
+            updateApiKeyStatus(apiKey);
             document.getElementById('settingsModal').classList.remove('hidden');
         }
 
@@ -496,16 +498,37 @@
             document.getElementById('settingsModal').classList.add('hidden');
         }
 
+        function updateApiKeyStatus(apiKey) {
+            const statusEl = document.getElementById('apiKeyStatus');
+            if (apiKey) {
+                const masked = apiKey.slice(0, 4) + '****************';
+                statusEl.innerHTML = '<span style="color:#00b894">✅ API Key 已配置：' + masked + '</span>';
+            } else {
+                statusEl.innerHTML = '<span style="color:#ff6b6b">❌ API Key 未配置</span>';
+            }
+        }
+
         function saveApiKey() {
             const apiKey = document.getElementById('apiKeyInput').value.trim();
             if (apiKey) {
-                localStorage.setItem(API_KEY_KEY, apiKey);
-                showFeedback('API Key 已保存，AI 功能已开启！', 'success');
+                try {
+                    localStorage.setItem(API_KEY_KEY, apiKey);
+                    const saved = localStorage.getItem(API_KEY_KEY);
+                    if (saved === apiKey) {
+                        updateApiKeyStatus(apiKey);
+                        showFeedback('API Key 已保存，AI 功能已开启！', 'success');
+                    } else {
+                        showFeedback('API Key 保存失败，请检查浏览器存储设置', 'error');
+                    }
+                } catch (e) {
+                    console.error('localStorage error:', e);
+                    showFeedback('API Key 保存失败：' + e.message, 'error');
+                }
             } else {
                 localStorage.removeItem(API_KEY_KEY);
+                updateApiKeyStatus(null);
                 showFeedback('API Key 已清除，将使用普通解析模式', 'info');
             }
-            closeSettings();
         }
 
         function getApiKey() {
