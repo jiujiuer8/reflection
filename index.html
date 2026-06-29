@@ -2,124 +2,1061 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>文字计数器</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>每日复盘</title>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             min-height: 100vh;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            padding: 15px;
+            color: #fff;
+            font-size: 15px;
+        }
+        .container { max-width: 500px; margin: 0 auto; }
+        .header { text-align: center; margin-bottom: 20px; }
+        .header h1 { font-size: 24px; margin-bottom: 5px; }
+        .date { font-size: 13px; opacity: 0.7; }
+        .sync-status {
+            font-size: 12px;
+            margin-top: 5px;
+            color: #4ecdc4;
+            display: none;
+        }
+        .sync-status.error { color: #ff6b6b; }
+        .sync-status.loading { color: #ffc107; }
+
+        .mode-tabs {
             display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
-        }
-        .container {
-            background: white;
-            border-radius: 16px;
-            padding: 40px;
-            width: 100%;
-            max-width: 600px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-        }
-        h1 {
-            text-align: center;
-            color: #333;
-            margin-bottom: 30px;
-            font-size: 24px;
-        }
-        textarea {
-            width: 100%;
-            height: 150px;
-            border: 2px solid #e0e0e0;
+            background: rgba(255,255,255,0.05);
             border-radius: 12px;
-            padding: 16px;
-            font-size: 16px;
+            padding: 4px;
+            margin-bottom: 20px;
+        }
+        .mode-tab {
+            flex: 1;
+            padding: 14px;
+            text-align: center;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: transparent;
+            border: none;
+            color: rgba(255,255,255,0.6);
+        }
+        .mode-tab.active { 
+            background: #4ecdc4; 
+            color: #1a1a2e; 
+        }
+
+        .section {
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 15px;
+        }
+        .section-title {
+            font-size: 15px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .section-title .add-btn {
+            font-size: 12px;
+            padding: 2px 8px;
+            border-radius: 10px;
+            background: rgba(78, 205, 196, 0.2);
+            color: #4ecdc4;
+            cursor: pointer;
+        }
+
+        .input-field {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            border-radius: 10px;
+            padding: 14px;
+            color: #fff;
+            font-size: 15px;
+            outline: none;
+            margin-bottom: 10px;
+        }
+        .input-field::placeholder { color: rgba(255, 255, 255, 0.4); }
+
+        .textarea-field {
+            width: 100%;
+            min-height: 120px;
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            border-radius: 10px;
+            padding: 14px;
+            color: #fff;
+            font-size: 15px;
             resize: none;
             outline: none;
-            transition: border-color 0.3s;
+            font-family: inherit;
         }
-        textarea:focus {
-            border-color: #667eea;
+        .textarea-field::placeholder { color: rgba(255, 255, 255, 0.4); }
+
+        .btn {
+            padding: 14px;
+            border-radius: 12px;
+            border: none;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            transition: all 0.2s;
         }
-        .stats {
+        .btn-primary { background: #4ecdc4; color: #1a1a2e; }
+        .btn-secondary { background: rgba(255,255,255,0.1); color: #fff; }
+        .btn-small { padding: 8px 12px; font-size: 13px; width: auto; }
+        .btn-danger { background: rgba(255, 107, 107, 0.2); color: #ff6b6b; }
+        .btn:active { transform: scale(0.98); }
+
+        .task-list { list-style: none; margin-top: 10px; }
+        .task-item {
             display: flex;
-            justify-content: space-around;
-            margin-top: 30px;
+            align-items: center;
+            gap: 12px;
+            padding: 14px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 12px;
+            margin-bottom: 10px;
+            transition: all 0.2s;
         }
-        .stat-item {
+        .task-item.completed { opacity: 0.6; }
+        .task-item.completed .task-text { text-decoration: line-through; }
+        .task-checkbox {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .task-checkbox.checked { background: #4ecdc4; border-color: #4ecdc4; }
+        .task-checkbox.checked::after { content: '\\2713'; font-size: 13px; color: #fff; }
+        .task-text { flex: 1; font-size: 15px; }
+        .task-type {
+            font-size: 12px;
+            padding: 3px 8px;
+            border-radius: 15px;
+            background: rgba(255,255,255,0.1);
+            flex-shrink: 0;
+        }
+        .task-type.study { background: rgba(78, 205, 196, 0.2); color: #4ecdc4; }
+        .task-type.exercise { background: rgba(255, 193, 7, 0.2); color: #ffc107; }
+        .task-type.work { background: rgba(102, 126, 234, 0.2); color: #667eea; }
+        .task-type.personal { background: rgba(255, 107, 107, 0.2); color: #ff6b6b; }
+
+        .habit-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 10px; }
+        .habit-item {
+            padding: 14px 10px;
             text-align: center;
+            border-radius: 12px;
+            background: rgba(255,255,255,0.05);
+            cursor: pointer;
+            transition: all 0.2s;
         }
-        .stat-value {
-            font-size: 36px;
-            font-weight: bold;
-            color: #667eea;
+        .habit-item:hover { transform: scale(1.02); }
+        .habit-item.checked { background: #4ecdc4; color: #1a1a2e; }
+        .habit-icon { font-size: 22px; margin-bottom: 6px; }
+        .habit-name { font-size: 13px; font-weight: 500; }
+        .habit-target { font-size: 11px; opacity: 0.7; margin-top: 2px; }
+        .habit-progress { font-size: 12px; margin-top: 4px; font-weight: 600; }
+        .habit-progress-bar {
+            height: 5px;
+            background: rgba(255,255,255,0.15);
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: 6px;
         }
-        .stat-label {
+        .habit-progress-fill {
+            height: 100%;
+            background: #4ecdc4;
+            border-radius: 3px;
+            transition: width 0.3s;
+        }
+        .habit-item.checked .habit-progress-bar { background: rgba(26,26,46,0.2); }
+        .habit-item.checked .habit-progress-fill { background: #1a1a2e; }
+
+        .stats { display: flex; gap: 10px; margin-top: 15px; }
+        .stat-card {
+            flex: 1;
+            text-align: center;
+            padding: 12px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 10px;
+        }
+        .stat-value { font-size: 20px; font-weight: bold; color: #4ecdc4; }
+        .stat-label { font-size: 12px; opacity: 0.7; margin-top: 2px; }
+
+        .hidden { display: none; }
+
+        .feedback-box {
+            margin-top: 10px;
+            padding: 12px;
+            border-radius: 10px;
+            font-size: 13px;
+            display: none;
+        }
+        .feedback-box.success { background: rgba(0, 184, 148, 0.2); border-left: 3px solid #00b894; display: block; }
+        .feedback-box.warning { background: rgba(255, 193, 7, 0.2); border-left: 3px solid #ffc107; display: block; }
+        .feedback-box.error { background: rgba(255, 107, 107, 0.2); border-left: 3px solid #ff6b6b; display: block; }
+
+        .settings-btn {
+            position: fixed;
+            top: 15px;
+            right: 15px;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: none;
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+            font-size: 16px;
+            cursor: pointer;
+            z-index: 100;
+        }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        .modal-overlay.hidden { display: none; }
+        .modal {
+            background: #16213e;
+            border-radius: 16px;
+            padding: 24px;
+            width: 90%;
+            max-width: 400px;
+            max-height: 80vh;
+            overflow-y: auto;
+            position: relative;
+        }
+        .modal-title { font-size: 18px; font-weight: 600; margin-bottom: 15px; }
+        .modal-close {
+            position: absolute;
+            right: 16px;
+            top: 16px;
+            background: none;
+            border: none;
+            color: #fff;
+            font-size: 20px;
+            cursor: pointer;
+        }
+
+        .habit-settings-list { margin-top: 10px; }
+        .habit-settings-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 10px;
+            margin-bottom: 8px;
+        }
+        .habit-settings-icon { font-size: 18px; }
+        .habit-settings-info { flex: 1; }
+        .habit-settings-name { font-size: 14px; font-weight: 500; }
+        .habit-settings-target { font-size: 12px; opacity: 0.7; }
+        .habit-settings-delete {
+            padding: 4px 8px;
+            font-size: 11px;
+            color: #ff6b6b;
+            background: rgba(255, 107, 107, 0.1);
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        .modal-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .modal-tab {
+            padding: 8px 16px;
             font-size: 14px;
-            color: #666;
-            margin-top: 5px;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            color: rgba(255,255,255,0.6);
         }
+        .modal-tab.active { border-bottom-color: #4ecdc4; color: #fff; }
+
+        .habit-actual-input {
+            width: 60px;
+            padding: 4px;
+            border-radius: 6px;
+            border: none;
+            background: rgba(255,255,255,0.1);
+            color: #fff;
+            font-size: 11px;
+            text-align: center;
+            margin-top: 4px;
+        }
+        .habit-item.checked .habit-actual-input { background: rgba(26,26,46,0.3); }
+        .habit-actual-input::placeholder { color: rgba(255,255,255,0.3); }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>文字计数器</h1>
-        <textarea id="textInput" placeholder="请输入文字..."></textarea>
-        <div class="stats">
-            <div class="stat-item">
-                <div class="stat-value" id="charCount">0</div>
-                <div class="stat-label">字符数</div>
+        <div class="header">
+            <h1>Daily Review</h1>
+            <div class="date" id="currentDate"></div>
+            <div class="sync-status" id="syncStatus">Syncing...</div>
+        </div>
+
+        <div class="mode-tabs">
+            <button class="mode-tab active" onclick="setMode('plan')">Morning Plan</button>
+            <button class="mode-tab" onclick="setMode('review')">Evening Review</button>
+        </div>
+
+        <div id="planView">
+            <div class="section">
+                <div class="section-title">Today's Plan</div>
+                <textarea class="textarea-field" id="planInput" placeholder="今天主要安排：心思知学习2小时，把过关文档改掉，听心力案例和思维课程"></textarea>
+                <button class="btn btn-primary" onclick="parsePlan()">Parse Plan</button>
+                <div id="planFeedback" class="feedback-box"></div>
             </div>
-            <div class="stat-item">
-                <div class="stat-value" id="wordCount">0</div>
-                <div class="stat-label">字数</div>
+
+            <div class="section">
+                <div class="section-title">Tasks <span class="add-btn" onclick="addPlanTask()">+</span></div>
+                <ul class="task-list" id="planTaskList"></ul>
             </div>
-            <div class="stat-item">
-                <div class="stat-value" id="sentenceCount">0</div>
-                <div class="stat-label">句子数</div>
+
+            <button class="btn btn-primary" onclick="savePlan()">Confirm Plan</button>
+        </div>
+
+        <div id="reviewView" class="hidden">
+            <div class="section">
+                <div class="section-title">Today's Tasks</div>
+                <ul class="task-list" id="reviewTaskList"></ul>
+                <div class="stats">
+                    <div class="stat-card">
+                        <div class="stat-value" id="completedCount">0</div>
+                        <div class="stat-label">Completed</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="totalCount">0</div>
+                        <div class="stat-label">Total</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="rateCount">0%</div>
+                        <div class="stat-label">Rate</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section">
+                <div class="section-title">Habits</div>
+                <div class="habit-grid" id="reviewHabitGrid"></div>
+            </div>
+
+            <div class="section">
+                <div class="section-title">Review Notes</div>
+                <textarea class="textarea-field" id="reviewNote" placeholder="今天完成了什么？有什么收获？遇到了什么挑战？"></textarea>
+            </div>
+
+            <button class="btn btn-primary" onclick="saveReview()">Save Review</button>
+        </div>
+    </div>
+
+    <button class="settings-btn" onclick="openSettings()">⚙️</button>
+
+    <div id="settingsModal" class="modal-overlay hidden">
+        <div class="modal">
+            <button class="modal-close" onclick="closeSettings()">✕</button>
+            <div class="modal-title">Settings</div>
+            
+            <div class="modal-tabs">
+                <div class="modal-tab active" onclick="switchSettingsTab('habits')">Habits</div>
+                <div class="modal-tab" onclick="switchSettingsTab('api')">API</div>
+                <div class="modal-tab" onclick="switchSettingsTab('sync')">Sync</div>
+            </div>
+
+            <div id="settingsHabits">
+                <div class="habit-settings-list" id="habitSettingsList"></div>
+                <button class="btn btn-secondary" style="margin-top:15px" onclick="addCustomHabit()">Add Habit</button>
+            </div>
+
+            <div id="settingsApi" class="hidden">
+                <div style="margin-bottom:15px">
+                    <label style="font-size:14px;display:block;margin-bottom:8px">DeepSeek API Key</label>
+                    <input type="text" class="input-field" id="apiKeyInput" placeholder="Enter API Key">
+                    <div id="apiKeyStatus" style="font-size:12px;margin-top:8px"></div>
+                </div>
+                <button class="btn btn-primary" onclick="saveApiKey()">Save</button>
+            </div>
+
+            <div id="settingsSync" class="hidden">
+                <div style="margin-bottom:15px">
+                    <label style="font-size:14px;display:block;margin-bottom:8px">Firebase Sync</label>
+                    <div style="font-size:13px;opacity:0.8;margin-bottom:10px">
+                        Data is synced across devices. Ensure you have the same user ID on all devices.
+                    </div>
+                    <div style="font-size:12px;color:#4ecdc4">User ID: <span id="userIdDisplay"></span></div>
+                </div>
+                <button class="btn btn-secondary" onclick="exportData()">Export Data</button>
+                <button class="btn btn-danger btn-small" style="margin-top:8px;width:100%" onclick="clearAllData()">Clear All Data</button>
             </div>
         </div>
     </div>
 
     <script>
-        const textInput = document.getElementById('textInput');
-        const charCount = document.getElementById('charCount');
-        const wordCount = document.getElementById('wordCount');
-        const sentenceCount = document.getElementById('sentenceCount');
+        const STORAGE_KEY = 'daily-review-today';
+        const HISTORY_KEY = 'daily-review-history';
+        const API_KEY_KEY = 'deepseek-api-key';
+        const HABITS_KEY = 'daily-review-habits';
+        const USER_ID_KEY = 'daily-review-user-id';
+        const DEEPSEEK_API_URL = 'https://api.deepseek.com/chat/completions';
 
-        textInput.addEventListener('input', function() {
-            const text = this.value;
+        const DEFAULT_HABITS = [
+            { id: 'study', name: 'Study', icon: '📚', defaultTarget: 60 },
+            { id: 'exercise', name: 'Exercise', icon: '🏃', defaultTarget: 30 },
+            { id: 'reading', name: 'Reading', icon: '📖', defaultTarget: 30 },
+            { id: 'sleep', name: 'Sleep', icon: '😴', defaultTarget: 480 },
+            { id: 'meditation', name: 'Meditation', icon: '🧘', defaultTarget: 10 },
+            { id: 'social', name: 'Social', icon: '👥', defaultTarget: 0 }
+        ];
 
-            // 字符数（不含空格）
-            const chars = text.replace(/\s/g, '').length;
-            charCount.textContent = chars;
+        let HABITS = [];
+        let currentMode = 'plan';
+        let db = null;
+        let userId = null;
 
-            // 字数（中文按字符，英文按单词）
-            let words = 0;
-            if (text.trim()) {
-                // 中文：每个字符算一个字
-                // 英文：按空格分割计算单词
-                const chineseChars = text.match(/[\u4e00-\u9fa5]/g);
-                const chineseCount = chineseChars ? chineseChars.length : 0;
-                
-                // 英文单词数
-                const englishWords = text.match(/[a-zA-Z]+/g);
-                const englishCount = englishWords ? englishWords.length : 0;
-                
-                words = chineseCount + englishCount;
+        function initFirebase() {
+            const firebaseConfig = {
+                apiKey: "AIzaSyC5834tVbxqodGpbtPRL7iJEDWjh5z5aXU",
+                authDomain: "awesome-c44fa.firebaseapp.com",
+                databaseURL: "https://awesome-c44fa-default-rtdb.firebaseio.com",
+                projectId: "awesome-c44fa",
+                storageBucket: "awesome-c44fa.firebasestorage.app",
+                messagingSenderId: "153410769736",
+                appId: "1:153410769736:web:5d456b05af457001f0d97d",
+                measurementId: "G-6BQ7GBD1QY"
+            };
+
+            try {
+                const app = firebase.initializeApp(firebaseConfig);
+                db = firebase.database(app);
+                userId = localStorage.getItem(USER_ID_KEY);
+                if (!userId) {
+                    userId = 'user_' + Date.now().toString(36) + Math.random().toString(36).substr(2);
+                    localStorage.setItem(USER_ID_KEY, userId);
+                }
+                document.getElementById('userIdDisplay').textContent = userId;
+                updateSyncStatus('connected', 'Connected');
+                syncFromCloud();
+            } catch(e) {
+                updateSyncStatus('error', 'Sync unavailable');
+                console.warn('Firebase init failed:', e);
             }
-            wordCount.textContent = words;
+        }
 
-            // 句子数（根据句号、感叹号、问号分割）
-            const sentences = text.split(/[.。!！?？]+/).filter(s => s.trim().length > 0);
-            sentenceCount.textContent = sentences.length;
-        });
+        function updateSyncStatus(type, message) {
+            const el = document.getElementById('syncStatus');
+            el.textContent = message;
+            el.className = 'sync-status ' + type;
+            el.style.display = 'block';
+        }
+
+        function loadHabits() {
+            const saved = localStorage.getItem(HABITS_KEY);
+            if (saved) {
+                try {
+                    HABITS = JSON.parse(saved);
+                } catch {
+                    HABITS = JSON.parse(JSON.stringify(DEFAULT_HABITS));
+                }
+            } else {
+                HABITS = JSON.parse(JSON.stringify(DEFAULT_HABITS));
+            }
+        }
+
+        function saveHabits() {
+            localStorage.setItem(HABITS_KEY, JSON.stringify(HABITS));
+            if (db) {
+                db.ref('users/' + userId + '/habits').set(HABITS);
+            }
+        }
+
+        function syncFromCloud() {
+            if (!db) return;
+            
+            updateSyncStatus('loading', 'Syncing...');
+            
+            db.ref('users/' + userId + '/habits').once('value').then(function(snapshot) {
+                const cloudHabits = snapshot.val();
+                if (cloudHabits && cloudHabits.length > 0) {
+                    HABITS = cloudHabits;
+                    localStorage.setItem(HABITS_KEY, JSON.stringify(HABITS));
+                }
+            });
+
+            const todayKey = new Date().toDateString();
+            db.ref('users/' + userId + '/history/' + todayKey).once('value').then(function(snapshot) {
+                const cloudData = snapshot.val();
+                if (cloudData) {
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(cloudData));
+                    loadReviewData();
+                }
+                updateSyncStatus('connected', 'Synced');
+            }).catch(function() {
+                updateSyncStatus('error', 'Sync failed');
+            });
+        }
+
+        function syncToCloud(data) {
+            if (!db) return;
+            const todayKey = new Date().toDateString();
+            db.ref('users/' + userId + '/history/' + todayKey).set(data);
+            updateSyncStatus('connected', 'Synced');
+        }
+
+        function formatDate(date) {
+            return date.toLocaleDateString('zh-CN', { 
+                year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' 
+            });
+        }
+
+        function setMode(mode) {
+            currentMode = mode;
+            document.querySelectorAll('.mode-tab').forEach(function(t) { t.classList.remove('active'); });
+            document.querySelector('.mode-tab[onclick="setMode(\'' + mode + '\')"]').classList.add('active');
+            
+            document.getElementById('planView').classList.add('hidden');
+            document.getElementById('reviewView').classList.add('hidden');
+            document.getElementById(mode + 'View').classList.remove('hidden');
+            
+            if (mode === 'review') {
+                loadReviewData();
+            }
+        }
+
+        function parsePlan() {
+            const input = document.getElementById('planInput').value;
+            if (!input.trim()) {
+                showFeedback('planFeedback', 'Please enter your plan', 'warning');
+                return;
+            }
+
+            const apiKey = localStorage.getItem(API_KEY_KEY);
+            
+            if (apiKey) {
+                parseWithAI(input);
+            } else {
+                const result = parseText(input);
+                displayPlanResult(result);
+            }
+        }
+
+        async function parseWithAI(input) {
+            showFeedback('planFeedback', 'AI parsing...', 'success');
+            try {
+                const response = await fetch(DEEPSEEK_API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + localStorage.getItem(API_KEY_KEY)
+                    },
+                    body: JSON.stringify({
+                        model: 'deepseek-v4-flash',
+                        messages: [{
+                            role: 'system',
+                            content: '你是智能规划助手。解析自然语言计划，只提取任务（不要提取习惯）。任务类型：study(学习相关)、exercise(运动相关)、work(工作/文档/项目)、personal(其他)。学习时长等量化目标不需要提取，只提取具体行动项。返回JSON：tasks[{text, type}]'
+                        }, {
+                            role: 'user',
+                            content: input
+                        }],
+                        temperature: 0.3,
+                        max_tokens: 500
+                    })
+                });
+
+                if (!response.ok) throw new Error('API failed');
+                const data = await response.json();
+                
+                try {
+                    const jsonStr = data.choices[0].message.content.replace(/```json/g, '').replace(/```/g, '').trim();
+                    const result = JSON.parse(jsonStr);
+                    displayPlanResult({ tasks: result.tasks || [], habits: [] });
+                } catch {
+                    const result = parseText(input);
+                    displayPlanResult(result);
+                }
+            } catch {
+                const result = parseText(input);
+                displayPlanResult(result);
+            }
+        }
+
+        function parseText(text) {
+            const result = { tasks: [], habits: [] };
+
+            function isNegative(line) {
+                return /没有|没|不|别|不要|无法|没做到|没完成/.test(line);
+            }
+
+            function addTask(text) {
+                var isWork = text.includes('文档') || text.includes('项目') || text.includes('工作') || text.includes('过关') || text.includes('方案') || text.includes('报告');
+                var isStudy = text.includes('课程') || text.includes('案例') || text.includes('思维') || text.includes('心力');
+                var isExercise = text.includes('运动') || text.includes('锻炼') || text.includes('跑步') || text.includes('瑜伽') || text.includes('站桩');
+                var isPersonal = text.includes('聊') || text.includes('聚会') || text.includes('见面') || text.includes('约');
+                
+                var type = 'personal';
+                if (isWork) type = 'work';
+                else if (isStudy) type = 'study';
+                else if (isExercise) type = 'exercise';
+                else if (isPersonal) type = 'personal';
+                
+                var exists = result.tasks.some(function(t) {
+                    return t.text === text || text.indexOf(t.text) === 0 || t.text.indexOf(text) === 0;
+                });
+                if (!exists) {
+                    result.tasks.push({ text: text, type: type });
+                }
+            }
+
+            const taskVerbs = ['把', '做', '改', '写', '约', '准备', '完成', '处理', '确认', '听', '整理', '复习', '预习'];
+            const pattern = new RegExp('(' + taskVerbs.join('|') + ')\\s*([^，。！？；、]+)', 'gi');
+            
+            var lines = text.split(/\n|；|;/).map(function(l) { return l.trim(); }).filter(function(l) { return l && !isNegative(l); });
+            
+            lines.forEach(function(line) {
+                pattern.lastIndex = 0;
+                let match;
+                while ((match = pattern.exec(line)) !== null) {
+                    let taskText = match[2].trim();
+                    if (!taskText || taskText.length <= 1) continue;
+                    if (/\d+\s*(小时|时|分钟|分)/.test(taskText)) continue;
+                    
+                    taskText = taskText.replace(/^(一个|继续|再|然后|接着|一下|一下下|好)/, '').trim();
+                    if (taskText.length <= 1) continue;
+                    
+                    addTask(taskText);
+                }
+            });
+
+            return result;
+        }
+
+        function formatTime(minutes) {
+            if (minutes >= 60) {
+                const hours = Math.floor(minutes / 60);
+                const mins = minutes % 60;
+                return mins > 0 ? hours + 'h' + mins + 'm' : hours + 'h';
+            }
+            return minutes + 'm';
+        }
+
+        function displayPlanResult(result) {
+            const list = document.getElementById('planTaskList');
+            list.innerHTML = '';
+
+            (result.tasks || []).forEach(function(task) {
+                const li = document.createElement('li');
+                li.className = 'task-item';
+                li.innerHTML = '<span class="task-checkbox" onclick="toggleTask(this)"></span>' +
+                    '<span class="task-text">' + task.text + '</span>' +
+                    '<span class="task-type ' + task.type + '">' + getTypeLabel(task.type) + '</span>';
+                list.appendChild(li);
+            });
+
+            showFeedback('planFeedback', 'Plan parsed successfully!', 'success');
+        }
+
+        function getTypeLabel(type) {
+            const labels = { study: 'Study', exercise: 'Exercise', work: 'Work', personal: 'Personal' };
+            return labels[type] || 'Personal';
+        }
+
+        function addPlanTask() {
+            const list = document.getElementById('planTaskList');
+            const li = document.createElement('li');
+            li.className = 'task-item';
+            li.innerHTML = '<span class="task-checkbox" onclick="toggleTask(this)"></span>' +
+                '<input type="text" class="input-field" style="margin:0;padding:0;background:none;font-size:15px;border:none;flex:1" placeholder="Task content..." onblur="this.parentElement.querySelector(\'.task-text\').textContent = this.value; this.remove()">' +
+                '<select class="task-type" style="padding:3px 8px;border-radius:15px;background:rgba(255,255,255,0.1);color:#fff;font-size:12px;border:none">'+
+                '<option value="personal">Personal</option><option value="work">Work</option><option value="study">Study</option><option value="exercise">Exercise</option>'+
+                '</select>';
+            list.appendChild(li);
+            li.querySelector('input').focus();
+        }
+
+        function savePlan() {
+            const tasks = Array.from(document.querySelectorAll('#planTaskList .task-item')).map(function(item) {
+                const text = item.querySelector('.task-text')?.textContent || item.querySelector('input')?.value || '';
+                let type = 'personal';
+                const typeEl = item.querySelector('.task-type');
+                if (typeEl) {
+                    if (typeEl.tagName === 'SELECT') {
+                        type = typeEl.value;
+                    } else {
+                        const classes = typeEl.className.split(' ');
+                        const found = classes.find(function(c) { return ['study', 'exercise', 'work', 'personal'].includes(c); });
+                        type = found || 'personal';
+                    }
+                }
+                return { text, type, completed: false };
+            }).filter(function(t) { return t.text.trim(); });
+
+            const habits = {};
+            HABITS.forEach(function(habit) {
+                habits[habit.id] = {
+                    checked: false,
+                    target: habit.defaultTarget,
+                    actual: 0
+                };
+            });
+
+            const todayData = {
+                date: new Date().toDateString(),
+                tasks: tasks,
+                habits: habits,
+                note: '',
+                planSaved: true
+            };
+
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(todayData));
+            syncToCloud(todayData);
+            showFeedback('planFeedback', 'Plan saved! Switch to Evening Review to track completion', 'success');
+        }
+
+        function loadReviewData() {
+            const saved = localStorage.getItem(STORAGE_KEY);
+            const today = new Date().toDateString();
+
+            if (saved) {
+                const data = JSON.parse(saved);
+                if (data.date === today) {
+                    displayReviewTasks(data.tasks || []);
+                    displayReviewHabits(data.habits || {});
+                    document.getElementById('reviewNote').value = data.note || '';
+                } else {
+                    initNewDay();
+                }
+            } else {
+                initNewDay();
+            }
+        }
+
+        function initNewDay() {
+            const habits = {};
+            HABITS.forEach(function(habit) {
+                habits[habit.id] = {
+                    checked: false,
+                    target: habit.defaultTarget,
+                    actual: 0
+                };
+            });
+
+            const todayData = {
+                date: new Date().toDateString(),
+                tasks: [],
+                habits: habits,
+                note: '',
+                planSaved: false
+            };
+
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(todayData));
+            displayReviewTasks([]);
+            displayReviewHabits(habits);
+        }
+
+        function displayReviewTasks(tasks) {
+            const list = document.getElementById('reviewTaskList');
+            list.innerHTML = '';
+
+            tasks.forEach(function(task) {
+                const li = document.createElement('li');
+                li.className = 'task-item' + (task.completed ? ' completed' : '');
+                li.innerHTML = '<span class="task-checkbox ' + (task.completed ? 'checked' : '') + '" onclick="toggleTask(this)"></span>' +
+                    '<span class="task-text">' + task.text + '</span>' +
+                    '<span class="task-type ' + task.type + '">' + getTypeLabel(task.type) + '</span>';
+                list.appendChild(li);
+            });
+
+            updateStats();
+        }
+
+        function displayReviewHabits(habits) {
+            const grid = document.getElementById('reviewHabitGrid');
+            grid.innerHTML = '';
+
+            HABITS.forEach(function(habit) {
+                const data = habits[habit.id] || { target: habit.defaultTarget, actual: 0, checked: false };
+                const div = document.createElement('div');
+                div.className = 'habit-item' + (data.checked ? ' checked' : '');
+                div.dataset.habitId = habit.id;
+                
+                let content = '<div class="habit-icon">' + habit.icon + '</div>' +
+                    '<div class="habit-name">' + habit.name + '</div>';
+                
+                if (habit.defaultTarget > 0) {
+                    content += '<div class="habit-target">Target: ' + formatTime(habit.defaultTarget) + '</div>' +
+                        '<div class="habit-progress">' + formatTime(data.actual) + '</div>' +
+                        '<div class="habit-progress-bar"><div class="habit-progress-fill" style="width:' + Math.min(100, Math.round((data.actual / habit.defaultTarget) * 100)) + '%"></div></div>' +
+                        '<input type="number" class="habit-actual-input" placeholder="mins" value="' + (data.actual || '') + '" onchange="updateHabitActual(this)">';
+                } else {
+                    content += '<div class="habit-progress">' + (data.checked ? '✓' : '') + '</div>';
+                }
+                
+                div.innerHTML = content;
+                
+                div.onclick = function(e) {
+                    if (e.target.tagName !== 'INPUT') {
+                        div.classList.toggle('checked');
+                        const progressText = div.querySelector('.habit-progress');
+                        if (progressText && !habit.defaultTarget) {
+                            progressText.textContent = div.classList.contains('checked') ? '✓' : '';
+                        }
+                    }
+                };
+                grid.appendChild(div);
+            });
+        }
+
+        function updateHabitActual(input) {
+            const div = input.closest('.habit-item');
+            const progressBar = div.querySelector('.habit-progress-fill');
+            const progressText = div.querySelector('.habit-progress');
+            const habitId = div.dataset.habitId;
+            const actual = parseInt(input.value) || 0;
+            const habit = HABITS.find(function(h) { return h.id === habitId; });
+            
+            progressText.textContent = formatTime(actual);
+            
+            if (habit && habit.defaultTarget > 0) {
+                const progress = Math.min(100, Math.round((actual / habit.defaultTarget) * 100));
+                progressBar.style.width = progress + '%';
+            }
+        }
+
+        function toggleTask(el) {
+            el.classList.toggle('checked');
+            el.closest('.task-item').classList.toggle('completed');
+            updateStats();
+        }
+
+        function updateStats() {
+            const total = document.querySelectorAll('#reviewTaskList .task-item').length;
+            const completed = document.querySelectorAll('#reviewTaskList .task-item.completed').length;
+            const rate = total > 0 ? Math.round((completed / total) * 100) : 0;
+
+            document.getElementById('completedCount').textContent = completed;
+            document.getElementById('totalCount').textContent = total;
+            document.getElementById('rateCount').textContent = rate + '%';
+        }
+
+        function saveReview() {
+            const tasks = Array.from(document.querySelectorAll('#reviewTaskList .task-item')).map(function(item) {
+                return {
+                    text: item.querySelector('.task-text').textContent,
+                    type: item.querySelector('.task-type').textContent.toLowerCase(),
+                    completed: item.classList.contains('completed')
+                };
+            });
+
+            const habits = {};
+            document.querySelectorAll('#reviewHabitGrid .habit-item').forEach(function(item) {
+                const habitId = item.dataset.habitId;
+                const actualInput = item.querySelector('.habit-actual-input');
+                const actual = parseInt(actualInput ? actualInput.value : '0') || 0;
+                
+                habits[habitId] = {
+                    checked: item.classList.contains('checked'),
+                    target: 0,
+                    actual: actual
+                };
+            });
+
+            HABITS.forEach(function(habit) {
+                if (habits[habit.id]) {
+                    habits[habit.id].target = habit.defaultTarget;
+                }
+            });
+
+            const note = document.getElementById('reviewNote').value;
+
+            const todayData = {
+                date: new Date().toDateString(),
+                tasks: tasks,
+                habits: habits,
+                note: note,
+                planSaved: true,
+                reviewSaved: true
+            };
+
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(todayData));
+            syncToCloud(todayData);
+            
+            const history = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+            const existingIndex = history.findIndex(function(h) { return h.date === todayData.date; });
+            if (existingIndex >= 0) {
+                history[existingIndex] = todayData;
+            } else {
+                history.push(todayData);
+            }
+            localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+
+            showFeedback('planFeedback', 'Review saved!', 'success');
+        }
+
+        function showFeedback(id, message, type) {
+            const box = document.getElementById(id);
+            if (!box) return;
+            box.className = 'feedback-box ' + type;
+            box.textContent = message;
+        }
+
+        function openSettings() {
+            const apiKey = localStorage.getItem(API_KEY_KEY);
+            document.getElementById('apiKeyInput').value = apiKey || '';
+            document.getElementById('apiKeyStatus').textContent = apiKey ? 'API Key configured' : 'Not configured';
+            document.getElementById('settingsModal').classList.remove('hidden');
+            renderHabitSettings();
+        }
+
+        function closeSettings() {
+            document.getElementById('settingsModal').classList.add('hidden');
+        }
+
+        function switchSettingsTab(tab) {
+            document.querySelectorAll('.modal-tab').forEach(function(t) { t.classList.remove('active'); });
+            document.querySelector('.modal-tab[onclick="switchSettingsTab(\'' + tab + '\')"]').classList.add('active');
+            
+            document.getElementById('settingsHabits').classList.add('hidden');
+            document.getElementById('settingsApi').classList.add('hidden');
+            document.getElementById('settingsSync').classList.add('hidden');
+            document.getElementById('settings' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.remove('hidden');
+        }
+
+        function renderHabitSettings() {
+            const list = document.getElementById('habitSettingsList');
+            list.innerHTML = '';
+            
+            HABITS.forEach(function(habit) {
+                const div = document.createElement('div');
+                div.className = 'habit-settings-item';
+                div.innerHTML = '<div class="habit-settings-icon">' + habit.icon + '</div>' +
+                    '<div class="habit-settings-info">' +
+                    '<div class="habit-settings-name">' + habit.name + '</div>' +
+                    '<div class="habit-settings-target">Target: ' + formatTime(habit.defaultTarget) + '</div>' +
+                    '</div>' +
+                    '<button class="habit-settings-delete" onclick="deleteHabit(\'' + habit.id + '\')">Delete</button>';
+                list.appendChild(div);
+            });
+        }
+
+        function addCustomHabit() {
+            const name = prompt('Enter habit name:');
+            if (!name) return;
+            
+            const icons = ['📚', '🏃', '📖', '😴', '🧘', '👥', '🎯', '💪', '🎨', '🎵', '💡', '🌱'];
+            let icon = '🎯';
+            for (let i = 0; i < icons.length; i++) {
+                const ok = confirm('Use ' + icons[i] + ' for ' + name + '?');
+                if (ok) {
+                    icon = icons[i];
+                    break;
+                }
+            }
+            
+            const target = parseInt(prompt('Enter default target in minutes (0 for boolean):')) || 0;
+            
+            const newHabit = {
+                id: 'custom_' + Date.now(),
+                name: name,
+                icon: icon,
+                defaultTarget: target
+            };
+            
+            HABITS.push(newHabit);
+            saveHabits();
+            renderHabitSettings();
+        }
+
+        function deleteHabit(id) {
+            if (!confirm('Delete this habit?')) return;
+            HABITS = HABITS.filter(function(h) { return h.id !== id; });
+            saveHabits();
+            renderHabitSettings();
+        }
+
+        function saveApiKey() {
+            const apiKey = document.getElementById('apiKeyInput').value.trim();
+            if (apiKey) {
+                localStorage.setItem(API_KEY_KEY, apiKey);
+                document.getElementById('apiKeyStatus').textContent = 'API Key saved';
+            } else {
+                localStorage.removeItem(API_KEY_KEY);
+                document.getElementById('apiKeyStatus').textContent = 'Cleared';
+            }
+        }
+
+        function exportData() {
+            const history = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+            const data = {
+                userId: userId,
+                habits: HABITS,
+                history: history
+            };
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'daily-review-backup.json';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function clearAllData() {
+            if (!confirm('Clear all data? This cannot be undone.')) return;
+            localStorage.removeItem(STORAGE_KEY);
+            localStorage.removeItem(HISTORY_KEY);
+            loadHabits();
+            initNewDay();
+            closeSettings();
+            setMode('plan');
+        }
+
+        document.getElementById('currentDate').textContent = formatDate(new Date());
+
+        loadHabits();
+        initFirebase();
+
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+            const data = JSON.parse(saved);
+            if (data.date === new Date().toDateString()) {
+                if (data.reviewSaved) {
+                    setMode('review');
+                } else if (data.planSaved) {
+                    setMode('review');
+                }
+            }
+        }
     </script>
 </body>
 </html>
