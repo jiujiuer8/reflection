@@ -4,8 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>每日复盘</title>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <script src="https://imgcache.qq.com/qcloud/tcbjs/1.10.16/tcb.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -411,12 +410,14 @@
 
             <div id="settingsSync" class="hidden">
                 <div style="margin-bottom:15px">
-                    <label style="font-size:14px;display:block;margin-bottom:8px">Firebase Sync</label>
+                    <label style="font-size:14px;display:block;margin-bottom:8px">CloudBase Env ID</label>
+                    <input type="text" class="input-field" id="cloudbaseEnvId" placeholder="Enter CloudBase envId">
                     <div style="font-size:13px;opacity:0.8;margin-bottom:10px">
-                        Data is synced across devices. Ensure you have the same user ID on all devices.
+                        Data is synced across devices. Ensure you have the same User ID on all devices.
                     </div>
                     <div style="font-size:12px;color:#4ecdc4">User ID: <span id="userIdDisplay"></span></div>
                 </div>
+                <button class="btn btn-primary" onclick="saveCloudBaseConfig()">Save Config</button>
                 <button class="btn btn-secondary" onclick="exportData()">Export Data</button>
                 <button class="btn btn-danger btn-small" style="margin-top:8px;width:100%" onclick="clearAllData()">Clear All Data</button>
             </div>
@@ -445,21 +446,23 @@
         let db = null;
         let userId = null;
 
-        function initFirebase() {
-            const firebaseConfig = {
-                apiKey: "AIzaSyC5834tVbxqodGpbtPRL7iJEDWjh5z5aXU",
-                authDomain: "awesome-c44fa.firebaseapp.com",
-                databaseURL: "https://awesome-c44fa-default-rtdb.firebaseio.com",
-                projectId: "awesome-c44fa",
-                storageBucket: "awesome-c44fa.firebasestorage.app",
-                messagingSenderId: "153410769736",
-                appId: "1:153410769736:web:5d456b05af457001f0d97d",
-                measurementId: "G-6BQ7GBD1QY"
-            };
+        function initCloudBase() {
+            const envId = localStorage.getItem('cloudbase-env-id');
+            
+            if (!envId) {
+                updateSyncStatus('warning', 'CloudBase not configured');
+                userId = localStorage.getItem(USER_ID_KEY) || ('user_' + Date.now().toString(36) + Math.random().toString(36).substr(2));
+                localStorage.setItem(USER_ID_KEY, userId);
+                document.getElementById('userIdDisplay').textContent = userId;
+                return;
+            }
 
             try {
-                const app = firebase.initializeApp(firebaseConfig);
-                db = firebase.database(app);
+                db = tcb.init({
+                    env: envId,
+                    persistence: 'local'
+                });
+                
                 userId = localStorage.getItem(USER_ID_KEY);
                 if (!userId) {
                     userId = 'user_' + Date.now().toString(36) + Math.random().toString(36).substr(2);
@@ -470,7 +473,7 @@
                 syncFromCloud();
             } catch(e) {
                 updateSyncStatus('error', 'Sync unavailable');
-                console.warn('Firebase init failed:', e);
+                console.warn('CloudBase init failed:', e);
             }
         }
 
@@ -497,41 +500,59 @@
         function saveHabits() {
             localStorage.setItem(HABITS_KEY, JSON.stringify(HABITS));
             if (db) {
-                db.ref('users/' + userId + '/habits').set(HABITS);
+                const collection = db.collection('habits');
+                collection.doc(userId).set({ data: HABITS });
             }
         }
 
-        function syncFromCloud() {
+        async function syncFromCloud() {
             if (!db) return;
             
             updateSyncStatus('loading', 'Syncing...');
             
-            db.ref('users/' + userId + '/habits').once('value').then(function(snapshot) {
-                const cloudHabits = snapshot.val();
-                if (cloudHabits && cloudHabits.length > 0) {
-                    HABITS = cloudHabits;
+            try {
+                const habitCollection = db.collection('habits');
+                const habitRes = await habitCollection.doc(userId).get();
+                if (habitRes.data && habitRes.data().data) {
+                    HABITS = habitRes.data().data;
                     localStorage.setItem(HABITS_KEY, JSON.stringify(HABITS));
                 }
-            });
 
-            const todayKey = new Date().toDateString();
-            db.ref('users/' + userId + '/history/' + todayKey).once('value').then(function(snapshot) {
-                const cloudData = snapshot.val();
-                if (cloudData) {
+                const historyCollection = db.collection('history');
+                const todayKey = new Date().toDateString();
+                const historyRes = await historyCollection.where('userId', '==', userId).where('date', '==', todayKey).get();
+                
+                if (historyRes.data && historyRes.data().length > 0) {
+                    const cloudData = historyRes.data()[0];
+                    delete cloudData._id;
+                    delete cloudData.userId;
                     localStorage.setItem(STORAGE_KEY, JSON.stringify(cloudData));
                     loadReviewData();
                 }
                 updateSyncStatus('connected', 'Synced');
-            }).catch(function() {
+            } catch(e) {
                 updateSyncStatus('error', 'Sync failed');
-            });
+                console.warn('Sync error:', e);
+            }
         }
 
-        function syncToCloud(data) {
+        async function syncToCloud(data) {
             if (!db) return;
-            const todayKey = new Date().toDateString();
-            db.ref('users/' + userId + '/history/' + todayKey).set(data);
-            updateSyncStatus('connected', 'Synced');
+            try {
+                const collection = db.collection('history');
+                const todayKey = new Date().toDateString();
+                const res = await collection.where('userId', '==', userId).where('date', '==', todayKey).get();
+                
+                data.userId = userId;
+                if (res.data && res.data().length > 0) {
+                    await collection.doc(res.data()[0]._id).update(data);
+                } else {
+                    await collection.add(data);
+                }
+                updateSyncStatus('connected', 'Synced');
+            } catch(e) {
+                console.warn('Sync error:', e);
+            }
         }
 
         function formatDate(date) {
@@ -934,8 +955,20 @@
             const apiKey = localStorage.getItem(API_KEY_KEY);
             document.getElementById('apiKeyInput').value = apiKey || '';
             document.getElementById('apiKeyStatus').textContent = apiKey ? 'API Key configured' : 'Not configured';
+            
+            const envId = localStorage.getItem('cloudbase-env-id');
+            document.getElementById('cloudbaseEnvId').value = envId || '';
+            
             document.getElementById('settingsModal').classList.remove('hidden');
             renderHabitSettings();
+        }
+
+        function saveCloudBaseConfig() {
+            const envId = document.getElementById('cloudbaseEnvId').value.trim();
+            if (envId) {
+                localStorage.setItem('cloudbase-env-id', envId);
+                alert('Config saved! Please refresh the page.');
+            }
         }
 
         function closeSettings() {
@@ -1044,7 +1077,7 @@
         document.getElementById('currentDate').textContent = formatDate(new Date());
 
         loadHabits();
-        initFirebase();
+        initCloudBase();
 
         const saved = localStorage.getItem(STORAGE_KEY);
         if (saved) {
