@@ -453,7 +453,7 @@
         };
 
         let cloudReady = false;
-        let firebaseApp = null;
+        let firebaseToken = null;
 
         const DEFAULT_HABITS = [
             { id: 'study', name: 'Study', icon: '📚', defaultTarget: 60 },
@@ -475,9 +475,6 @@
             initFirebase();
         }
 
-        let cloudReady = false;
-        let firebaseToken = null;
-        
         async function initFirebase() {
             updateSyncStatus('loading', 'Connecting...');
             
