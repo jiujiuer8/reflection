@@ -448,15 +448,21 @@
             const envId = 'awesome-dgj2v6ftba6dd6d34';
 
             try {
-                db = cloudbase.init({
+                const app = cloudbase.init({
                     env: envId,
                     region: 'ap-shanghai'
                 });
                 
-                const auth = db.auth({
-                    persistence: 'local'
-                });
-                await auth.signInAnonymously();
+                db = app.database();
+                
+                try {
+                    const auth = app.auth({
+                        persistence: 'local'
+                    });
+                    await auth.signInAnonymously();
+                } catch(e) {
+                    console.warn('Anonymous login failed, continuing without auth:', e);
+                }
                 
                 userId = localStorage.getItem(USER_ID_KEY);
                 if (!userId) {
@@ -506,19 +512,17 @@
             updateSyncStatus('loading', 'Syncing...');
             
             try {
-                const habitCollection = db.collection('habits');
-                const habitRes = await habitCollection.doc(userId).get();
-                if (habitRes.data && habitRes.data().data) {
-                    HABITS = habitRes.data().data;
+                const habitRes = await db.collection('habits').doc(userId).get();
+                if (habitRes.data && habitRes.data.data) {
+                    HABITS = habitRes.data.data;
                     localStorage.setItem(HABITS_KEY, JSON.stringify(HABITS));
                 }
 
-                const historyCollection = db.collection('history');
                 const todayKey = new Date().toDateString();
-                const historyRes = await historyCollection.where('userId', '==', userId).where('date', '==', todayKey).get();
+                const historyRes = await db.collection('history').where({ userId: userId, date: todayKey }).get();
                 
-                if (historyRes.data && historyRes.data().length > 0) {
-                    const cloudData = historyRes.data()[0];
+                if (historyRes.data && historyRes.data.length > 0) {
+                    const cloudData = historyRes.data[0];
                     delete cloudData._id;
                     delete cloudData.userId;
                     localStorage.setItem(STORAGE_KEY, JSON.stringify(cloudData));
@@ -534,15 +538,15 @@
         async function syncToCloud(data) {
             if (!db) return;
             try {
-                const collection = db.collection('history');
                 const todayKey = new Date().toDateString();
-                const res = await collection.where('userId', '==', userId).where('date', '==', todayKey).get();
+                const res = await db.collection('history').where({ userId: userId, date: todayKey }).get();
                 
                 data.userId = userId;
-                if (res.data && res.data().length > 0) {
-                    await collection.doc(res.data()[0]._id).update(data);
+                data.date = todayKey;
+                if (res.data && res.data.length > 0) {
+                    await db.collection('history').doc(res.data[0]._id).update(data);
                 } else {
-                    await collection.add(data);
+                    await db.collection('history').add(data);
                 }
                 updateSyncStatus('connected', 'Synced');
             } catch(e) {
