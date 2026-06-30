@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>每日复盘</title>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -410,12 +413,19 @@
 
             <div id="settingsSync" class="hidden">
                 <div style="margin-bottom:15px">
-                    <label style="font-size:14px;display:block;margin-bottom:8px">Data Storage</label>
-                    <div style="font-size:13px;opacity:0.8;margin-bottom:10px">
-                        Data is stored locally in your browser. Use Export/Import to transfer data between devices.
-                    </div>
-                    <div style="font-size:12px;color:#4ecdc4">User ID: <span id="userIdDisplay"></span></div>
+                    <label style="font-size:14px;display:block;margin-bottom:8px">Firebase Sync</label>
+                    <div id="cloudStatus" style="font-size:12px;margin-top:10px;color:#4ecdc4"></div>
+                    <button class="btn btn-primary" style="margin-top:10px;width:100%" onclick="syncFromCloud()">Sync from Cloud</button>
+                    <button class="btn btn-secondary" style="margin-top:8px;width:100%" onclick="syncToCloud()">Sync to Cloud</button>
+                    <div style="font-size:11px;opacity:0.6;margin-top:8px">Requires VPN in China for sync to work</div>
                 </div>
+                
+                <div style="margin-bottom:15px;padding-top:15px;border-top:1px solid rgba(255,255,255,0.1)">
+                    <label style="font-size:14px;display:block;margin-bottom:8px">User ID</label>
+                    <div style="font-size:13px;color:#4ecdc4" id="userIdDisplay"></div>
+                    <div style="font-size:12px;opacity:0.6;margin-top:4px">Use the same User ID on all devices for sync</div>
+                </div>
+                
                 <button class="btn btn-secondary" onclick="exportData()">Export Data</button>
                 <button class="btn btn-primary" style="margin-top:8px;width:100%" onclick="importData()">Import Data</button>
                 <button class="btn btn-danger btn-small" style="margin-top:8px;width:100%" onclick="clearAllData()">Clear All Data</button>
@@ -430,6 +440,20 @@
         const HABITS_KEY = 'daily-review-habits';
         const USER_ID_KEY = 'daily-review-user-id';
         const DEEPSEEK_API_URL = 'https://api.deepseek.com/chat/completions';
+
+        const FIREBASE_CONFIG = {
+            apiKey: "AIzaSyC5834tVbxqodGpbtPRL7iJEDWjh5z5aXU",
+            authDomain: "awesome-c44fa.firebaseapp.com",
+            databaseURL: "https://awesome-c44fa-default-rtdb.firebaseio.com",
+            projectId: "awesome-c44fa",
+            storageBucket: "awesome-c44fa.appspot.com",
+            messagingSenderId: "153410769736",
+            appId: "1:153410769736:web:5d456b05af457001f0d97d",
+            measurementId: "G-6BQ7GBD1QY"
+        };
+
+        let cloudReady = false;
+        let firebaseApp = null;
 
         const DEFAULT_HABITS = [
             { id: 'study', name: 'Study', icon: '📚', defaultTarget: 60 },
@@ -447,7 +471,34 @@
             const userId = localStorage.getItem(USER_ID_KEY) || ('user_' + Date.now().toString(36) + Math.random().toString(36).substr(2));
             localStorage.setItem(USER_ID_KEY, userId);
             document.getElementById('userIdDisplay').textContent = userId;
-            updateSyncStatus('connected', 'Local Storage');
+            
+            initFirebase();
+        }
+
+        function initFirebase() {
+            try {
+                if (!window.firebase) {
+                    updateSyncStatus('connected', 'Firebase SDK loading...');
+                    setTimeout(initFirebase, 1000);
+                    return;
+                }
+
+                firebaseApp = firebase.initializeApp(FIREBASE_CONFIG);
+                
+                firebase.auth().signInAnonymously().then(function() {
+                    cloudReady = true;
+                    updateSyncStatus('connected', 'Cloud Sync Active');
+                    syncFromCloud();
+                }).catch(function(err) {
+                    console.warn('Firebase auth failed:', err);
+                    cloudReady = false;
+                    updateSyncStatus('connected', 'Firebase Auth Failed (VPN?)');
+                });
+            } catch(err) {
+                console.warn('Firebase init failed:', err);
+                cloudReady = false;
+                updateSyncStatus('connected', 'Firebase Init Failed');
+            }
         }
 
         function updateSyncStatus(type, message) {
@@ -875,6 +926,9 @@
             document.getElementById('apiKeyInput').value = apiKey || '';
             document.getElementById('apiKeyStatus').textContent = apiKey ? 'API Key configured' : 'Not configured';
             
+            document.getElementById('cloudStatus').textContent = cloudReady ? 'Cloud sync active' : 'Cloud sync not connected';
+            document.getElementById('cloudStatus').style.color = cloudReady ? '#4ecdc4' : '#ffc107';
+            
             document.getElementById('settingsModal').classList.remove('hidden');
             renderHabitSettings();
         }
@@ -1013,6 +1067,91 @@
             initNewDay();
             closeSettings();
             setMode('plan');
+            syncToCloud();
+        }
+
+        function syncToCloud() {
+            if (!cloudReady || !firebaseApp) return;
+            
+            try {
+                const userId = localStorage.getItem(USER_ID_KEY);
+                const today = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+                const history = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+                
+                const data = {
+                    userId: userId,
+                    today: today,
+                    history: history,
+                    updatedAt: new Date().toISOString()
+                };
+                
+                firebase.database().ref('users/' + userId + '/dailyReview').set(data).then(function() {
+                    console.log('Firebase sync successful');
+                    updateSyncStatus('connected', 'Cloud Synced');
+                }).catch(function(err) {
+                    console.warn('Firebase sync failed:', err);
+                });
+            } catch(err) {
+                console.warn('Cloud sync error:', err);
+            }
+        }
+
+        function syncFromCloud() {
+            if (!cloudReady || !firebaseApp) return;
+            
+            try {
+                const userId = localStorage.getItem(USER_ID_KEY);
+                
+                firebase.database().ref('users/' + userId + '/dailyReview').once('value').then(function(snapshot) {
+                    const remote = snapshot.val();
+                    if (remote) {
+                        const localToday = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+                        
+                        if (remote.today && remote.today.date) {
+                            if (!localToday.date || remote.updatedAt > (localToday.updatedAt || '')) {
+                                localStorage.setItem(STORAGE_KEY, JSON.stringify(remote.today));
+                            }
+                        }
+                        
+                        if (remote.history) {
+                            const localHistory = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+                            const merged = mergeHistory(localHistory, remote.history);
+                            localStorage.setItem(HISTORY_KEY, JSON.stringify(merged));
+                        }
+                        
+                        updateSyncStatus('connected', 'Cloud Synced');
+                        console.log('Data synced from Firebase');
+                        
+                        if (currentMode === 'review') {
+                            loadReviewData();
+                        }
+                    }
+                }).catch(function(err) {
+                    console.warn('Firebase sync from failed:', err);
+                });
+            } catch(err) {
+                console.warn('Cloud sync from error:', err);
+            }
+        }
+
+        function mergeHistory(local, remote) {
+            const merged = [...local];
+            const localDates = new Set(local.map(function(h) { return h.date; }));
+            
+            remote.forEach(function(r) {
+                if (!localDates.has(r.date)) {
+                    merged.push(r);
+                } else {
+                    const idx = merged.findIndex(function(h) { return h.date === r.date; });
+                    if (idx >= 0 && (!merged[idx].updatedAt || r.updatedAt > merged[idx].updatedAt)) {
+                        merged[idx] = r;
+                    }
+                }
+            });
+            
+            return merged.sort(function(a, b) {
+                return new Date(b.date) - new Date(a.date);
+            });
         }
 
         document.getElementById('currentDate').textContent = formatDate(new Date());
