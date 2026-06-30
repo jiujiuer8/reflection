@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>每日复盘</title>
-    <script src="https://static.cloudbase.net/cloudbase-js-sdk/latest/cloudbase.full.js"></script>
+
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -410,13 +410,14 @@
 
             <div id="settingsSync" class="hidden">
                 <div style="margin-bottom:15px">
-                    <label style="font-size:14px;display:block;margin-bottom:8px">CloudBase Sync</label>
+                    <label style="font-size:14px;display:block;margin-bottom:8px">Data Storage</label>
                     <div style="font-size:13px;opacity:0.8;margin-bottom:10px">
-                        Data is synced across devices. Ensure you have the same User ID on all devices.
+                        Data is stored locally in your browser. Use Export/Import to transfer data between devices.
                     </div>
                     <div style="font-size:12px;color:#4ecdc4">User ID: <span id="userIdDisplay"></span></div>
                 </div>
                 <button class="btn btn-secondary" onclick="exportData()">Export Data</button>
+                <button class="btn btn-primary" style="margin-top:8px;width:100%" onclick="importData()">Import Data</button>
                 <button class="btn btn-danger btn-small" style="margin-top:8px;width:100%" onclick="clearAllData()">Clear All Data</button>
             </div>
         </div>
@@ -441,41 +442,12 @@
 
         let HABITS = [];
         let currentMode = 'plan';
-        let db = null;
-        let userId = null;
 
-        async function initCloudBase() {
-            const envId = 'awesome-dgj2v6ftba6dd6d34';
-
-            try {
-                const app = cloudbase.init({
-                    env: envId,
-                    region: 'ap-shanghai'
-                });
-                
-                db = app.database();
-                
-                try {
-                    const auth = app.auth({
-                        persistence: 'local'
-                    });
-                    await auth.signInAnonymously();
-                } catch(e) {
-                    console.warn('Anonymous login failed, continuing without auth:', e);
-                }
-                
-                userId = localStorage.getItem(USER_ID_KEY);
-                if (!userId) {
-                    userId = 'user_' + Date.now().toString(36) + Math.random().toString(36).substr(2);
-                    localStorage.setItem(USER_ID_KEY, userId);
-                }
-                document.getElementById('userIdDisplay').textContent = userId;
-                updateSyncStatus('connected', 'Connected');
-                syncFromCloud();
-            } catch(e) {
-                updateSyncStatus('error', 'Sync unavailable');
-                console.warn('CloudBase init failed:', e);
-            }
+        function initApp() {
+            const userId = localStorage.getItem(USER_ID_KEY) || ('user_' + Date.now().toString(36) + Math.random().toString(36).substr(2));
+            localStorage.setItem(USER_ID_KEY, userId);
+            document.getElementById('userIdDisplay').textContent = userId;
+            updateSyncStatus('connected', 'Local Storage');
         }
 
         function updateSyncStatus(type, message) {
@@ -500,58 +472,6 @@
 
         function saveHabits() {
             localStorage.setItem(HABITS_KEY, JSON.stringify(HABITS));
-            if (db) {
-                const collection = db.collection('habits');
-                collection.doc(userId).set({ data: HABITS });
-            }
-        }
-
-        async function syncFromCloud() {
-            if (!db) return;
-            
-            updateSyncStatus('loading', 'Syncing...');
-            
-            try {
-                const habitRes = await db.collection('habits').doc(userId).get();
-                if (habitRes.data && habitRes.data.data) {
-                    HABITS = habitRes.data.data;
-                    localStorage.setItem(HABITS_KEY, JSON.stringify(HABITS));
-                }
-
-                const todayKey = new Date().toDateString();
-                const historyRes = await db.collection('history').where({ userId: userId, date: todayKey }).get();
-                
-                if (historyRes.data && historyRes.data.length > 0) {
-                    const cloudData = historyRes.data[0];
-                    delete cloudData._id;
-                    delete cloudData.userId;
-                    localStorage.setItem(STORAGE_KEY, JSON.stringify(cloudData));
-                    loadReviewData();
-                }
-                updateSyncStatus('connected', 'Synced');
-            } catch(e) {
-                updateSyncStatus('error', 'Sync failed');
-                console.warn('Sync error:', e);
-            }
-        }
-
-        async function syncToCloud(data) {
-            if (!db) return;
-            try {
-                const todayKey = new Date().toDateString();
-                const res = await db.collection('history').where({ userId: userId, date: todayKey }).get();
-                
-                data.userId = userId;
-                data.date = todayKey;
-                if (res.data && res.data.length > 0) {
-                    await db.collection('history').doc(res.data[0]._id).update(data);
-                } else {
-                    await db.collection('history').add(data);
-                }
-                updateSyncStatus('connected', 'Synced');
-            } catch(e) {
-                console.warn('Sync error:', e);
-            }
         }
 
         function formatDate(date) {
@@ -955,19 +875,8 @@
             document.getElementById('apiKeyInput').value = apiKey || '';
             document.getElementById('apiKeyStatus').textContent = apiKey ? 'API Key configured' : 'Not configured';
             
-            const envId = localStorage.getItem('cloudbase-env-id');
-            document.getElementById('cloudbaseEnvId').value = envId || '';
-            
             document.getElementById('settingsModal').classList.remove('hidden');
             renderHabitSettings();
-        }
-
-        function saveCloudBaseConfig() {
-            const envId = document.getElementById('cloudbaseEnvId').value.trim();
-            if (envId) {
-                localStorage.setItem('cloudbase-env-id', envId);
-                alert('Config saved! Please refresh the page.');
-            }
         }
 
         function closeSettings() {
@@ -1049,9 +958,11 @@
 
         function exportData() {
             const history = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+            const today = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
             const data = {
-                userId: userId,
+                userId: localStorage.getItem(USER_ID_KEY),
                 habits: HABITS,
+                today: today,
                 history: history
             };
             const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -1061,6 +972,37 @@
             a.download = 'daily-review-backup.json';
             a.click();
             URL.revokeObjectURL(url);
+        }
+
+        function importData() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            input.onchange = function(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    try {
+                        const data = JSON.parse(event.target.result);
+                        if (data.userId) localStorage.setItem(USER_ID_KEY, data.userId);
+                        if (data.habits) {
+                            HABITS = data.habits;
+                            saveHabits();
+                        }
+                        if (data.today) localStorage.setItem(STORAGE_KEY, JSON.stringify(data.today));
+                        if (data.history) localStorage.setItem(HISTORY_KEY, JSON.stringify(data.history));
+                        
+                        alert('Data imported successfully!');
+                        location.reload();
+                    } catch(err) {
+                        alert('Invalid backup file');
+                    }
+                };
+                reader.readAsText(file);
+            };
+            input.click();
         }
 
         function clearAllData() {
@@ -1076,7 +1018,7 @@
         document.getElementById('currentDate').textContent = formatDate(new Date());
 
         loadHabits();
-        initCloudBase();
+        initApp();
 
         const saved = localStorage.getItem(STORAGE_KEY);
         if (saved) {
