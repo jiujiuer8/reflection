@@ -4,9 +4,64 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>每日复盘</title>
-    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+    <script>
+        var firebaseLoadAttempts = 0;
+        var firebaseLoadMaxAttempts = 2;
+        
+        function loadFirebaseSDK() {
+            var urls = [
+                'https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js',
+                'https://cdn.jsdelivr.net/npm/firebase@10.12.0/firebase-app-compat.js'
+            ];
+            
+            var authUrls = [
+                'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js',
+                'https://cdn.jsdelivr.net/npm/firebase@10.12.0/firebase-auth-compat.js'
+            ];
+            
+            var dbUrls = [
+                'https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js',
+                'https://cdn.jsdelivr.net/npm/firebase@10.12.0/firebase-database-compat.js'
+            ];
+            
+            function loadScript(url, onSuccess, onError) {
+                var script = document.createElement('script');
+                script.src = url;
+                script.onload = onSuccess;
+                script.onerror = onError;
+                document.head.appendChild(script);
+            }
+            
+            function loadAllScripts() {
+                var loaded = 0;
+                var total = 3;
+                
+                function checkAllLoaded() {
+                    loaded++;
+                    if (loaded >= total) {
+                        initApp();
+                    }
+                }
+                
+                loadScript(urls[firebaseLoadAttempts], checkAllLoaded, function() {
+                    if (firebaseLoadAttempts < firebaseLoadMaxAttempts - 1) {
+                        firebaseLoadAttempts++;
+                        loadAllScripts();
+                    } else {
+                        console.error('All Firebase CDN failed');
+                        initApp();
+                    }
+                });
+                
+                loadScript(authUrls[firebaseLoadAttempts], function() {}, function() {});
+                loadScript(dbUrls[firebaseLoadAttempts], function() {}, function() {});
+            }
+            
+            loadAllScripts();
+        }
+        
+        loadFirebaseSDK();
+    </script>
 
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -1167,7 +1222,6 @@
         document.getElementById('currentDate').textContent = formatDate(new Date());
 
         loadHabits();
-        initApp();
 
         const saved = localStorage.getItem(STORAGE_KEY);
         if (saved) {
