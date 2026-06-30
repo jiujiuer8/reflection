@@ -478,26 +478,31 @@
         function initFirebase() {
             try {
                 if (!window.firebase) {
-                    updateSyncStatus('connected', 'Firebase SDK loading...');
+                    updateSyncStatus('loading', 'Firebase SDK loading...');
                     setTimeout(initFirebase, 1000);
                     return;
                 }
 
+                console.log('Firebase SDK loaded, initializing...');
+                
                 firebaseApp = firebase.initializeApp(FIREBASE_CONFIG);
                 
-                firebase.auth().signInAnonymously().then(function() {
+                console.log('Firebase app initialized:', firebaseApp.name);
+                
+                firebase.auth().signInAnonymously().then(function(userCredential) {
+                    console.log('Anonymous login successful:', userCredential.user.uid);
                     cloudReady = true;
                     updateSyncStatus('connected', 'Cloud Sync Active');
                     syncFromCloud();
                 }).catch(function(err) {
-                    console.warn('Firebase auth failed:', err);
+                    console.error('Firebase auth failed:', err.code, err.message);
                     cloudReady = false;
-                    updateSyncStatus('connected', 'Firebase Auth Failed (VPN?)');
+                    updateSyncStatus('error', 'Auth Failed: ' + err.code);
                 });
             } catch(err) {
-                console.warn('Firebase init failed:', err);
+                console.error('Firebase init failed:', err);
                 cloudReady = false;
-                updateSyncStatus('connected', 'Firebase Init Failed');
+                updateSyncStatus('error', 'Init Failed: ' + err.message);
             }
         }
 
@@ -1071,7 +1076,10 @@
         }
 
         function syncToCloud() {
-            if (!cloudReady || !firebaseApp) return;
+            if (!cloudReady || !firebaseApp) {
+                console.log('Cloud sync not ready');
+                return;
+            }
             
             try {
                 const userId = localStorage.getItem(USER_ID_KEY);
@@ -1085,14 +1093,16 @@
                     updatedAt: new Date().toISOString()
                 };
                 
+                console.log('Syncing to Firebase:', 'users/' + userId + '/dailyReview');
+                
                 firebase.database().ref('users/' + userId + '/dailyReview').set(data).then(function() {
                     console.log('Firebase sync successful');
                     updateSyncStatus('connected', 'Cloud Synced');
                 }).catch(function(err) {
-                    console.warn('Firebase sync failed:', err);
+                    console.error('Firebase sync failed:', err.code, err.message);
                 });
             } catch(err) {
-                console.warn('Cloud sync error:', err);
+                console.error('Cloud sync error:', err);
             }
         }
 
