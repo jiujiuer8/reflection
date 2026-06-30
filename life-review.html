@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>每日复盘</title>
-    <script src="https://imgcache.qq.com/qcloud/tcbjs/1.10.16/tcb.js"></script>
+    <script src="https://static.cloudbase.net/cloudbase-js-sdk/latest/cloudbase.full.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -448,14 +448,15 @@
             const envId = 'awesome-dgj2v6ftba6dd6d34';
 
             try {
-                db = tcb.init({
+                db = cloudbase.init({
                     env: envId,
-                    persistence: 'local'
+                    region: 'ap-shanghai'
                 });
                 
-                await db.auth({
+                const auth = db.auth({
                     persistence: 'local'
-                }).signInAnonymously();
+                });
+                await auth.signInAnonymously();
                 
                 userId = localStorage.getItem(USER_ID_KEY);
                 if (!userId) {
