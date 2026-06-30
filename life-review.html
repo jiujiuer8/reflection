@@ -446,7 +446,7 @@
         let db = null;
         let userId = null;
 
-        function initCloudBase() {
+        async function initCloudBase() {
             const envId = localStorage.getItem('cloudbase-env-id');
             
             if (!envId) {
@@ -462,6 +462,10 @@
                     env: envId,
                     persistence: 'local'
                 });
+                
+                await db.auth({
+                    persistence: 'local'
+                }).signInAnonymously();
                 
                 userId = localStorage.getItem(USER_ID_KEY);
                 if (!userId) {
