@@ -925,15 +925,28 @@
         }
 
         function openSettings() {
-            const apiKey = localStorage.getItem(API_KEY_KEY);
-            document.getElementById('apiKeyInput').value = apiKey || '';
-            document.getElementById('apiKeyStatus').textContent = apiKey ? 'API Key configured' : 'Not configured';
-            
-            document.getElementById('cloudStatus').textContent = cloudReady ? 'Cloud sync active' : 'Cloud sync not connected';
-            document.getElementById('cloudStatus').style.color = cloudReady ? '#4ecdc4' : '#ffc107';
-            
-            document.getElementById('settingsModal').classList.remove('hidden');
-            renderHabitSettings();
+            try {
+                const apiKey = localStorage.getItem(API_KEY_KEY);
+                const apiKeyInput = document.getElementById('apiKeyInput');
+                if (apiKeyInput) apiKeyInput.value = apiKey || '';
+                
+                const apiKeyStatus = document.getElementById('apiKeyStatus');
+                if (apiKeyStatus) apiKeyStatus.textContent = apiKey ? 'API Key configured' : 'Not configured';
+                
+                const cloudStatus = document.getElementById('cloudStatus');
+                if (cloudStatus) {
+                    cloudStatus.textContent = cloudReady ? 'Cloud sync active' : 'Cloud sync not connected';
+                    cloudStatus.style.color = cloudReady ? '#4ecdc4' : '#ffc107';
+                }
+                
+                const settingsModal = document.getElementById('settingsModal');
+                if (settingsModal) settingsModal.classList.remove('hidden');
+                
+                renderHabitSettings();
+            } catch(err) {
+                console.error('openSettings error:', err);
+                alert('Settings error: ' + err.message);
+            }
         }
 
         function closeSettings() {
